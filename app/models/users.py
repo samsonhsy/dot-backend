@@ -1,4 +1,4 @@
-# users.py
+# app/models/users.py
 from sqlite3.dbapi2 import Timestamp
 from sqlalchemy import Column, Integer, String, TIMESTAMPTZ, func
 from app.db.database import Base
