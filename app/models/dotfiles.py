@@ -1,6 +1,6 @@
 # app/models/dotfiles.py
 from sqlite3.dbapi2 import Timestamp
-from sqlalchemy import Text, Column, Integer, String, TIMESTAMPTZ, func
+from sqlalchemy import Text, Column, Integer, String
 from app.db.database import Base
 
 class Dotfiles(Base):
