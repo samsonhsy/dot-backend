@@ -1,5 +1,4 @@
 # app/models/collections.py
-from sqlite3.dbapi2 import Timestamp
 from sqlalchemy import Boolean, ForeignKey, Text, Column, Integer, String, TIMESTAMPTZ, func
 from app.db.database import Base
 

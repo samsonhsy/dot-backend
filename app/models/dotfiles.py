@@ -1,5 +1,4 @@
 # app/models/dotfiles.py
-from sqlite3.dbapi2 import Timestamp
 from sqlalchemy import ForeignKey, Text, Column, Integer, String
 from app.db.database import Base
 
