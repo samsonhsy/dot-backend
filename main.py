@@ -3,8 +3,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 
 from app.db.database import get_db
+from app.routers import auth
 
-app = FastAPI()
+app = FastAPI(title="Dot-Backend API")
 
 @app.get("/api/healthcheck")
 async def healthcheck(db: AsyncSession = Depends(get_db)):
@@ -21,3 +22,5 @@ async def healthcheck(db: AsyncSession = Depends(get_db)):
 @app.get("/")
 async def read_root():
     return {"message": "Welcome to the dot-backend API!"}
+
+app.include_router(auth.router, prefix="/auth", tags=["Authentication"])
