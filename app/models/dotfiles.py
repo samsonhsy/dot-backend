@@ -2,7 +2,7 @@
 from sqlalchemy import ForeignKey, Text, Column, Integer, String
 from app.db.database import Base
 
-class Dotfiles(Base):
+class Dotfile(Base):
     __tablename__ = "dotfiles"
     
     id = Column(Integer, primary_key=True)
