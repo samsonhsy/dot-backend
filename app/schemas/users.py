@@ -9,6 +9,6 @@ class UserCreate(BaseModel):
 class UserOutput(BaseModel):
     username: str
     email: EmailStr
-    
+    id: int
     class Config: 
         from_attributes = True # SQLAlchemy(DB) to Pydantic(API)
