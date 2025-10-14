@@ -1,7 +1,7 @@
 # app/core/security
 from datetime import timedelta, datetime, timezone
 from typing import Optional
-from jose import jwt, JWTError
+import jwt
 from passlib.context import CryptContext
 
 from app.core.settings import settings
