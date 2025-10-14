@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
 from app.models.collections import Collection
-from schemas.collections import CollectionOutput
+from app.schemas.collections import CollectionCreate, CollectionOutput
 
 async def get_collections_by_user(db: AsyncSession, user_id: int) -> list[CollectionOutput]:
     result = await db.execute(select(Collection).filter(Collection.owner_id == user_id))
