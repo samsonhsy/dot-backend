@@ -19,6 +19,6 @@ async def create_dotfiles_in_collection(db: AsyncSession, dotfiles : list[Dotfil
     .execution_options(populate_existing=True)
     )
     
-    await db.execute(refesh_statement).scalars().all()
+    await db.execute(refesh_statement)
 
     return db_dotfiles
