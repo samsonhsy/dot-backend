@@ -3,11 +3,10 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.database import get_db
-from app.models.users import User
 from app.schemas.users import UserCreate, UserOutput
 from app.schemas.token import Token
 from app.services import user_service
-from app.services.auth_service import get_current_active_user
+from app.services.auth_service import get_current_user, oauth2_scheme
 
 router = APIRouter()
 
@@ -17,8 +16,13 @@ async def user_list(db:AsyncSession = Depends(get_db)):
     return db_users
     
 @router.get("/me", response_model=UserOutput)
-async def user_list(user: User = Depends(get_current_active_user)):
-    return user
+async def user_list(
+    token: str = Depends(oauth2_scheme),
+    db: AsyncSession = Depends(get_db)
+):
+    # Call auth service directly to get user
+    current_user = await get_current_user(token, db)
+    return current_user
 
 @router.delete("/{user_id}")
 async def user_delete(user_id: int, db: AsyncSession = Depends(get_db)):
