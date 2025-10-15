@@ -16,13 +16,10 @@ async def user_list(db:AsyncSession = Depends(get_db)):
     return db_users
     
 @router.get("/me", response_model=UserOutput)
-async def user_list(
-    token: str = Depends(oauth2_scheme),
-    db: AsyncSession = Depends(get_db)
+async def current_user_info(
+    user = Depends(get_current_user)
 ):
-    # Call auth service directly to get user
-    current_user = await get_current_user(token, db)
-    return current_user
+    return user
 
 @router.delete("/{user_id}")
 async def user_delete(user_id: int, db: AsyncSession = Depends(get_db)):
