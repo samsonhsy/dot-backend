@@ -15,7 +15,7 @@ async def create_dotfiles_in_collection(db: AsyncSession, dotfiles : list[Dotfil
     # refresh all dotfile row entries created
     refesh_statement = (
     select(Dotfile)
-    .where(Dotfile.path.in_([db_dotfile.path for db_dotfile in db_dotfiles]))
+    .where(Dotfile.id.in_([db_dotfile.id for db_dotfile in db_dotfiles]))
     .execution_options(populate_existing=True)
     )
     
