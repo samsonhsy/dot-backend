@@ -33,3 +33,5 @@ async def create_collection(db: AsyncSession, collection: CollectionCreate, user
     await create_dotfiles_in_collection(db=db, collection_id=db_collection.id, dotfiles=collection.content)
 
     return db_collection
+
+# TO DO: Add update collection content function (Requires communication with front-end team)
