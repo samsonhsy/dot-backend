@@ -1,4 +1,5 @@
 # app/services/collection_service.py
+from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
@@ -7,7 +8,7 @@ from app.schemas.collections import CollectionCreate
 
 from app.services.dotfile_service import create_dotfiles_in_collection
 
-async def get_collections_by_user(db: AsyncSession, user_id: int) -> list[Collection]:
+async def get_collections_by_user_id(db: AsyncSession, user_id: int) -> Optional[list[Collection]]:
     result = await db.execute(select(Collection).filter(Collection.owner_id == user_id))
     return result.scalars().all()
 
