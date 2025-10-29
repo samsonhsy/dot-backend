@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "asyncpg>=0.30.0",
+    "boto3>=1.40.61",
     "email-validator>=2.3.0",
     "fastapi>=0.118.0",
     "passlib>=1.7.4",
