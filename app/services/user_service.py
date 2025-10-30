@@ -7,11 +7,11 @@ from app.models.users import User
 from app.schemas.users import UserCreate
 from app.core.security import get_pwd_hash
 
-async def get_users(db:AsyncSession) -> Optional[list[User]]:
+async def get_users(db: AsyncSession) -> Optional[list[User]]:
     result = await db.execute(select(User))
     return result.scalars().all()
 
-async def get_user_by_id(db:AsyncSession, user_id:int) -> Optional[list[User]]:
+async def get_user_by_id(db: AsyncSession, user_id: int) -> Optional[User]:
     result = await db.execute(select(User).filter(User.id == user_id))
     return result.scalars().all()
 
