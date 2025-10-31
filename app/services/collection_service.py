@@ -1,14 +1,18 @@
 # app/services/collection_service.py
 from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
+import aioboto3
+from aiobotocore.session import ClientCreatorContext as S3Client
+
 from sqlalchemy.future import select
 
-from fastapi import HTTPException, status
+from fastapi import HTTPException, status, UploadFile
 
 from app.models.dotfiles import Dotfile
 from app.models.collections import Collection
 from app.schemas.collections import CollectionCreate, CollectionContentAdd
 
+from app.services import file_storage_service
 from app.services.dotfile_service import create_dotfiles_in_collection
 
 async def get_access_to_collection_for_user(db: AsyncSession, collection_id: int, user_id: int) -> bool:
@@ -35,11 +39,16 @@ async def create_collection(db: AsyncSession, collection: CollectionCreate, user
 
     return db_collection
 
-async def add_to_collection(db: AsyncSession, collection: CollectionContentAdd, user_id: int) -> list[Dotfile]:
-    if not get_access_to_collection_for_user(db=db, collection_id=collection.collection_id, user_id=user_id):
+async def add_to_collection(db: AsyncSession, s3: S3Client, collection_add: CollectionContentAdd, files: list[UploadFile], user_id: int) -> list[Dotfile]:
+    if not get_access_to_collection_for_user(db=db, collection_id=collection_add.collection_id, user_id=user_id):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User does not have access to collection")
     
-    result = await create_dotfiles_in_collection(db, collection.content, collection.collection_id)
+    # upload the files to s3 bucket
+    for file in files:
+        file.filename = f"{collection_add.collection_id}/{file.filename}"
+        file_storage_service.upload_file_to_storage(s3, file)
+
+    result = await create_dotfiles_in_collection(db, collection_add.content, collection_add.collection_id)
 
     return result
 
