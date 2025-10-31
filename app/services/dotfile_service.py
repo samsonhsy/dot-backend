@@ -11,8 +11,13 @@ async def get_dotfiles_by_collection_id(db: AsyncSession, collection_id: int) ->
 
 # creates dotfile records in the dotfile table 
 async def create_dotfiles_in_collection(db: AsyncSession, dotfiles : list[DotfileCreate], collection_id : int) -> list[Dotfile]:
-    db_dotfiles = [Dotfile(path=dotfile.path, file_name=dotfile.file_name, collection_id=collection_id) for dotfile in dotfiles]
+    db_dotfiles = [] 
+    
+    for dotfile in dotfiles:
+        db_dotfile = Dotfile(path=dotfile.path, file_name=dotfile.file_name)
         
+        db_dotfiles.append(db_dotfile)
+
     db.add_all(db_dotfiles)
 
     await db.commit()
