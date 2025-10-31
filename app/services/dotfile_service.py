@@ -5,6 +5,9 @@ from sqlalchemy.future import select
 from app.models.dotfiles import Dotfile
 from app.schemas.dotfiles import DotfileCreate
 
+async def generate_dotfile_name_in_collection(collection_id: int, filename: str):
+    return f"{collection_id}/{filename}"
+
 async def get_dotfiles_by_collection_id(db: AsyncSession, collection_id: int) -> list[Dotfile]:
     result = await db.execute(select(Dotfile).filter(Dotfile.collection_id == collection_id))
     return result.scalars.all()

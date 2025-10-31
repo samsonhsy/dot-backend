@@ -13,7 +13,7 @@ from app.models.collections import Collection
 from app.schemas.collections import CollectionCreate, CollectionContentAdd, CollectionContentDelete
 
 from app.services import file_storage_service
-from app.services.dotfile_service import create_dotfiles_in_collection, delete_dotfile
+from app.services.dotfile_service import create_dotfiles_in_collection, delete_dotfile, generate_dotfile_name_in_collection
 
 async def get_access_to_collection_for_user(db: AsyncSession, collection_id: int, user_id: int) -> bool:
     result = await db.execute(select(Collection).filter(Collection.id == collection_id))
@@ -42,7 +42,7 @@ async def create_collection(db: AsyncSession, collection: CollectionCreate, user
 async def add_to_collection(db: AsyncSession, s3: S3Client, collection_add: CollectionContentAdd, files: list[UploadFile]) -> list[Dotfile]:
     # upload the files to s3 bucket
     for file in files:
-        file.filename = f"{collection_add.collection_id}/{file.filename}"
+        file.filename = generate_dotfile_name_in_collection(collection_add.collection_id, collection_add.file_name)
         file_storage_service.upload_file_to_storage(s3, file)
 
     result = await create_dotfiles_in_collection(db, collection_add.content, collection_add.collection_id)
@@ -50,7 +50,7 @@ async def add_to_collection(db: AsyncSession, s3: S3Client, collection_add: Coll
     return result
 
 async def delete_from_collection(db: AsyncSession, s3: S3Client, collection_delete: CollectionContentDelete):
-    deleted_filename = f"{collection_delete.collection_id}/{file.filename}"
+    deleted_filename = generate_dotfile_name_in_collection(collection_delete.collection_id, collection_delete.file_name)
     
     await file_storage_service.delete_file_from_storage_by_filename(s3, deleted_filename)
     await delete_dotfile(db, deleted_filename)
