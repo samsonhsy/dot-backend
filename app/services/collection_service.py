@@ -15,7 +15,7 @@ from app.models.collections import Collection
 from app.schemas.collections import CollectionCreate, CollectionContentAdd, CollectionContentRead, CollectionContentDelete
 
 from app.services import file_storage_service
-from app.services.dotfile_service import get_dotfiles_by_collection_id, create_dotfiles_in_collection, delete_dotfile, generate_dotfile_name_in_collection
+from app.services import dotfile_service
 
 async def get_access_to_collection_for_user(db: AsyncSession, collection_id: int, user_id: int) -> bool:
     result = await db.execute(select(Collection).filter(Collection.id == collection_id))
@@ -44,21 +44,21 @@ async def create_collection(db: AsyncSession, collection: CollectionCreate, user
 async def add_to_collection(db: AsyncSession, s3: S3Client, collection_add: CollectionContentAdd, files: list[UploadFile]) -> list[Dotfile]:
     # upload the files to s3 bucket
     for file in files:
-        file.filename = generate_dotfile_name_in_collection(collection_add.collection_id, collection_add.filename)
+        file.filename = dotfile_service.generate_dotfile_name_in_collection(collection_add.collection_id, collection_add.filename)
         
         await file_storage_service.upload_file_to_storage(s3, file)
 
-    result = await create_dotfiles_in_collection(db, collection_add.content, collection_add.collection_id)
+    result = await dotfile_service.create_dotfiles_in_collection(db, collection_add.content, collection_add.collection_id)
 
     return result
 
 async def get_dotfiles_from_collection(db: AsyncSession, s3: S3Client, collection_read: CollectionContentRead) -> list[StreamingBody]:
-    db_dotfiles = await get_dotfiles_by_collection_id(db, collection_read.collection_id)
+    db_dotfiles = await dotfile_service.get_dotfiles_by_collection_id(db, collection_read.collection_id)
 
     result = []
 
     for dotfile in db_dotfiles:
-        filename = generate_dotfile_name_in_collection(collection_read.collection_id, dotfile.filename)
+        filename = dotfile_service.generate_dotfile_name_in_collection(collection_read.collection_id, dotfile.filename)
         file = await file_storage_service.retrieve_file_from_storage_by_filename(s3, filename)
 
         result.append(file)
@@ -66,10 +66,10 @@ async def get_dotfiles_from_collection(db: AsyncSession, s3: S3Client, collectio
     return result
 
 async def delete_from_collection(db: AsyncSession, s3: S3Client, collection_delete: CollectionContentDelete):
-    deleted_filename = generate_dotfile_name_in_collection(collection_delete.collection_id, collection_delete.filename)
+    deleted_filename = dotfile_service.generate_dotfile_name_in_collection(collection_delete.collection_id, collection_delete.filename)
     
     await file_storage_service.delete_file_from_storage_by_filename(s3, deleted_filename)
-    await delete_dotfile(db, deleted_filename)
+    await dotfile_service.delete_dotfile(db, deleted_filename)
 
     return
 
