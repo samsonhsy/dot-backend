@@ -6,7 +6,7 @@ from aiobotocore.session import ClientCreatorContext as S3Client
 
 from sqlalchemy.future import select
 
-from fastapi import HTTPException, status, UploadFile
+from fastapi import UploadFile
 
 from app.models.dotfiles import Dotfile
 from app.models.collections import Collection
@@ -39,10 +39,7 @@ async def create_collection(db: AsyncSession, collection: CollectionCreate, user
 
     return db_collection
 
-async def add_to_collection(db: AsyncSession, s3: S3Client, collection_add: CollectionContentAdd, files: list[UploadFile], user_id: int) -> list[Dotfile]:
-    if not get_access_to_collection_for_user(db=db, collection_id=collection_add.collection_id, user_id=user_id):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User does not have access to collection")
-    
+async def add_to_collection(db: AsyncSession, s3: S3Client, collection_add: CollectionContentAdd, files: list[UploadFile]) -> list[Dotfile]:
     # upload the files to s3 bucket
     for file in files:
         file.filename = f"{collection_add.collection_id}/{file.filename}"
