@@ -32,3 +32,10 @@ async def create_dotfiles_in_collection(db: AsyncSession, dotfiles : list[Dotfil
     await db.execute(refesh_statement)
 
     return db_dotfiles
+
+async def delete_dotfile(db: AsyncSession, filename: str):
+    db_dotfile = (await db.execute(select(Dotfile).filter(Dotfile.file_name == filename))).scalars().first()
+    if db_dotfile:
+        await db.delete(db_dotfile)
+        await db.commit()
+    return

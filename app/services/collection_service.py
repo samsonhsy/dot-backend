@@ -10,10 +10,10 @@ from fastapi import UploadFile
 
 from app.models.dotfiles import Dotfile
 from app.models.collections import Collection
-from app.schemas.collections import CollectionCreate, CollectionContentAdd
+from app.schemas.collections import CollectionCreate, CollectionContentAdd, CollectionContentDelete
 
 from app.services import file_storage_service
-from app.services.dotfile_service import create_dotfiles_in_collection
+from app.services.dotfile_service import create_dotfiles_in_collection, delete_dotfile
 
 async def get_access_to_collection_for_user(db: AsyncSession, collection_id: int, user_id: int) -> bool:
     result = await db.execute(select(Collection).filter(Collection.id == collection_id))
@@ -48,5 +48,13 @@ async def add_to_collection(db: AsyncSession, s3: S3Client, collection_add: Coll
     result = await create_dotfiles_in_collection(db, collection_add.content, collection_add.collection_id)
 
     return result
+
+async def delete_from_collection(db: AsyncSession, s3: S3Client, collection_delete: CollectionContentDelete):
+    deleted_filename = f"{collection_delete.collection_id}/{file.filename}"
+    
+    await file_storage_service.delete_file_from_storage_by_filename(s3, deleted_filename)
+    await delete_dotfile(db, deleted_filename)
+
+    return
 
 # TO DO: Add update collection content function (Requires communication with front-end team)
