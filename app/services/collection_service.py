@@ -1,8 +1,10 @@
 # app/services/collection_service.py
 from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
+
 import aioboto3
 from aiobotocore.session import ClientCreatorContext as S3Client
+from aiobotocore.response import StreamingBody
 
 from sqlalchemy.future import select
 
@@ -10,10 +12,10 @@ from fastapi import UploadFile
 
 from app.models.dotfiles import Dotfile
 from app.models.collections import Collection
-from app.schemas.collections import CollectionCreate, CollectionContentAdd, CollectionContentDelete
+from app.schemas.collections import CollectionCreate, CollectionContentAdd, CollectionContentRead, CollectionContentDelete
 
 from app.services import file_storage_service
-from app.services.dotfile_service import create_dotfiles_in_collection, delete_dotfile, generate_dotfile_name_in_collection
+from app.services.dotfile_service import get_dotfiles_by_collection_id, create_dotfiles_in_collection, delete_dotfile, generate_dotfile_name_in_collection
 
 async def get_access_to_collection_for_user(db: AsyncSession, collection_id: int, user_id: int) -> bool:
     result = await db.execute(select(Collection).filter(Collection.id == collection_id))
@@ -47,6 +49,19 @@ async def add_to_collection(db: AsyncSession, s3: S3Client, collection_add: Coll
         await file_storage_service.upload_file_to_storage(s3, file)
 
     result = await create_dotfiles_in_collection(db, collection_add.content, collection_add.collection_id)
+
+    return result
+
+async def get_dotfiles_from_collection(db: AsyncSession, s3: S3Client, collection_read: CollectionContentRead) -> list[StreamingBody]:
+    db_dotfiles = await get_dotfiles_by_collection_id(db, collection_read.collection_id)
+
+    result = []
+
+    for dotfile in db_dotfiles:
+        filename = generate_dotfile_name_in_collection(collection_read.collection_id, dotfile.filename)
+        file = await file_storage_service.retrieve_file_from_storage_by_filename(s3, filename)
+
+        result.append(file)
 
     return result
 
