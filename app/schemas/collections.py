@@ -7,11 +7,14 @@ class CollectionCreate(BaseModel):
     name : str
     description : Optional[str] = ""
     is_private : Optional[bool] = True
-    content : list[DotfileCreate]
 
-class CollectionContentUpdate(BaseModel):
+class CollectionContentAdd(BaseModel):
     collection_id : int
     content : list[DotfileCreate]
+
+class CollectionContentDelete(BaseModel):
+    collection_id : int
+    file_name : str
 
 class CollectionContentRead(BaseModel):
     collection_id : int
