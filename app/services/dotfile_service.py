@@ -17,7 +17,7 @@ async def create_dotfiles_in_collection(db: AsyncSession, dotfiles : list[Dotfil
     db_dotfiles = [] 
     
     for dotfile in dotfiles:
-        db_dotfile = Dotfile(path=dotfile.path, file_name=dotfile.file_name)
+        db_dotfile = Dotfile(path=dotfile.path, filename=dotfile.filename)
         
         db_dotfiles.append(db_dotfile)
 
@@ -37,7 +37,7 @@ async def create_dotfiles_in_collection(db: AsyncSession, dotfiles : list[Dotfil
     return db_dotfiles
 
 async def delete_dotfile(db: AsyncSession, filename: str):
-    db_dotfile = (await db.execute(select(Dotfile).filter(Dotfile.file_name == filename))).scalars().first()
+    db_dotfile = (await db.execute(select(Dotfile).filter(Dotfile.filename == filename))).scalars().first()
     if db_dotfile:
         await db.delete(db_dotfile)
         await db.commit()

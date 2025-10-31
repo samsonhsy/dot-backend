@@ -42,7 +42,7 @@ async def create_collection(db: AsyncSession, collection: CollectionCreate, user
 async def add_to_collection(db: AsyncSession, s3: S3Client, collection_add: CollectionContentAdd, files: list[UploadFile]) -> list[Dotfile]:
     # upload the files to s3 bucket
     for file in files:
-        file.filename = generate_dotfile_name_in_collection(collection_add.collection_id, collection_add.file_name)
+        file.filename = generate_dotfile_name_in_collection(collection_add.collection_id, collection_add.filename)
         file_storage_service.upload_file_to_storage(s3, file)
 
     result = await create_dotfiles_in_collection(db, collection_add.content, collection_add.collection_id)
@@ -50,7 +50,7 @@ async def add_to_collection(db: AsyncSession, s3: S3Client, collection_add: Coll
     return result
 
 async def delete_from_collection(db: AsyncSession, s3: S3Client, collection_delete: CollectionContentDelete):
-    deleted_filename = generate_dotfile_name_in_collection(collection_delete.collection_id, collection_delete.file_name)
+    deleted_filename = generate_dotfile_name_in_collection(collection_delete.collection_id, collection_delete.filename)
     
     await file_storage_service.delete_file_from_storage_by_filename(s3, deleted_filename)
     await delete_dotfile(db, deleted_filename)

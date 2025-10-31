@@ -14,7 +14,7 @@ class CollectionContentAdd(BaseModel):
 
 class CollectionContentDelete(BaseModel):
     collection_id : int
-    file_name : str
+    filename : str
 
 class CollectionContentRead(BaseModel):
     collection_id : int
