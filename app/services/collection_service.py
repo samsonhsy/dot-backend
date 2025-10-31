@@ -3,8 +3,11 @@ from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
+from fastapi import HTTPException, status
+
+from app.models.dotfiles import Dotfile
 from app.models.collections import Collection
-from app.schemas.collections import CollectionCreate
+from app.schemas.collections import CollectionCreate, CollectionContentAdd
 
 from app.services.dotfile_service import create_dotfiles_in_collection
 
@@ -30,8 +33,14 @@ async def create_collection(db: AsyncSession, collection: CollectionCreate, user
     await db.commit()
     await db.refresh(db_collection)
 
-    await create_dotfiles_in_collection(db=db, collection_id=db_collection.id, dotfiles=collection.content)
-
     return db_collection
+
+async def add_to_collection(db: AsyncSession, collection: CollectionContentAdd, user_id: int) -> list[Dotfile]:
+    if not get_access_to_collection_for_user(db=db, collection_id=collection.collection_id, user_id=user_id):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User does not have access to collection")
+    
+    result = await create_dotfiles_in_collection(db, collection.content, collection.collection_id)
+
+    return result
 
 # TO DO: Add update collection content function (Requires communication with front-end team)
