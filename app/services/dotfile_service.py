@@ -9,6 +9,7 @@ async def get_dotfiles_by_collection_id(db: AsyncSession, collection_id: int) ->
     result = await db.execute(select(Dotfile).filter(Dotfile.collection_id == collection_id))
     return result.scalars.all()
 
+# creates dotfile records in the dotfile table 
 async def create_dotfiles_in_collection(db: AsyncSession, dotfiles : list[DotfileCreate], collection_id : int) -> list[Dotfile]:
     db_dotfiles = [Dotfile(path=dotfile.path, file_name=dotfile.file_name, collection_id=collection_id) for dotfile in dotfiles]
         
