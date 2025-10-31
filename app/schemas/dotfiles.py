@@ -3,11 +3,11 @@ from pydantic import BaseModel, FilePath
 
 class DotfileCreate(BaseModel):
     path : FilePath
-    content : str
+    file_name : str
 
 class DotfileOutput(BaseModel):
     path: FilePath
-    content: str
+    file_name: str
 
     class Config:
         from_attributes = True

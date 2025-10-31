@@ -8,5 +8,5 @@ class Dotfile(Base):
     id = Column(Integer, primary_key=True)
     collection_id = Column(Integer, ForeignKey("collections.id"), nullable=False)
     path = Column(String(255), nullable=False) # Can change string length later
-    content = Column(Text, nullable=False)
+    file_name = Column(String(255), nullable=False)
                 
