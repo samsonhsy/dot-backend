@@ -43,7 +43,8 @@ async def add_to_collection(db: AsyncSession, s3: S3Client, collection_add: Coll
     # upload the files to s3 bucket
     for file in files:
         file.filename = generate_dotfile_name_in_collection(collection_add.collection_id, collection_add.filename)
-        file_storage_service.upload_file_to_storage(s3, file)
+        
+        await file_storage_service.upload_file_to_storage(s3, file)
 
     result = await create_dotfiles_in_collection(db, collection_add.content, collection_add.collection_id)
 
