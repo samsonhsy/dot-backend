@@ -10,7 +10,7 @@ def generate_dotfile_name_in_collection(collection_id: int, filename: str):
 
 async def get_dotfiles_by_collection_id(db: AsyncSession, collection_id: int) -> list[Dotfile]:
     result = await db.execute(select(Dotfile).filter(Dotfile.collection_id == collection_id))
-    return result.scalars.all()
+    return result.scalars().all()
 
 # creates dotfile records in the dotfile table 
 async def create_dotfiles_in_collection(db: AsyncSession, dotfiles : list[DotfileCreate], collection_id : int) -> list[Dotfile]:
@@ -26,13 +26,13 @@ async def create_dotfiles_in_collection(db: AsyncSession, dotfiles : list[Dotfil
     await db.commit()
     
     # refresh all dotfile row entries created
-    refesh_statement = (
+    refresh_statement = (
     select(Dotfile)
     .where(Dotfile.id.in_([db_dotfile.id for db_dotfile in db_dotfiles]))
     .execution_options(populate_existing=True)
     )
     
-    await db.execute(refesh_statement)
+    await db.execute(refresh_statement)
 
     return db_dotfiles
 

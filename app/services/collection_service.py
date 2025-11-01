@@ -33,7 +33,7 @@ async def get_collections_by_user_id(db: AsyncSession, user_id: int) -> Optional
     return result.scalars().all()
 
 async def create_collection(db: AsyncSession, collection: CollectionCreate, user_id: int) -> Collection:
-    db_collection = Collection(name=collection.name, description=collection.description, owner_id=user_id)
+    db_collection = Collection(name=collection.name, description=collection.description, is_private=collection.is_private, owner_id=user_id)
     db.add(db_collection)
 
     await db.commit()
@@ -52,7 +52,7 @@ async def add_to_collection(db: AsyncSession, s3: S3Client, collection_add: Coll
 
     return result
 
-async def get_dotfiles_from_collection(db: AsyncSession, s3: S3Client, collection_read: CollectionContentRead) -> [list[Dotfile], list[StreamingBody]]:
+async def get_dotfiles_from_collection(db: AsyncSession, s3: S3Client, collection_read: CollectionContentRead) -> tuple[list[Dotfile], list[StreamingBody]]:
     db_dotfiles = await dotfile_service.get_dotfiles_by_collection_id(db, collection_read.collection_id)
 
     result = []
