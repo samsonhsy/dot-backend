@@ -2,7 +2,7 @@
 from sqlalchemy import Boolean, ForeignKey, Text, Column, Integer, String, TIMESTAMPTZ, func
 from app.db.database import Base
 
-class Collections(Base):
+class Collection(Base):
     __tablename__ = "collections"
     
     id = Column(Integer, primary_key=True)
