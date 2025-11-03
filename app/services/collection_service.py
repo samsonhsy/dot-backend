@@ -52,7 +52,12 @@ async def add_to_collection(db: AsyncSession, s3: S3Client, collection_add: Coll
 
     return result
 
-async def get_dotfiles_from_collection(db: AsyncSession, s3: S3Client, collection_read: CollectionContentRead) -> tuple[list[Dotfile], list[StreamingBody]]:
+async def get_dotfile_paths_from_collection(db: AsyncSession, collection_read: CollectionContentRead) -> list[Dotfile]:
+    result = await dotfile_service.get_dotfiles_by_collection_id(db, collection_read.collection_id)
+
+    return result
+
+async def get_dotfiles_from_collection(db: AsyncSession, s3: S3Client, collection_read: CollectionContentRead) -> list[StreamingBody]:
     db_dotfiles = await dotfile_service.get_dotfiles_by_collection_id(db, collection_read.collection_id)
 
     result = []
@@ -63,7 +68,7 @@ async def get_dotfiles_from_collection(db: AsyncSession, s3: S3Client, collectio
 
         result.append(file)
 
-    return db_dotfiles, result
+    return result
 
 async def delete_from_collection(db: AsyncSession, s3: S3Client, collection_delete: CollectionContentDelete):
     deleted_filename = dotfile_service.generate_dotfile_name_in_collection(collection_delete.collection_id, collection_delete.filename)
