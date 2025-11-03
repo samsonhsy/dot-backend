@@ -48,7 +48,7 @@ async def get_collection_content(collection : CollectionContentRead, db: AsyncSe
 
     return Response(content=zipfile, headers=headers, media_type=media_type)
 
-@router.get("/{collection.collection_id}/file-paths", list[DotfileOutput])
+@router.get("/{collection.collection_id}/file-paths", response_model=list[DotfileOutput])
 async def get_collection_file_paths(collection : CollectionContentRead, db: AsyncSession = Depends(get_db), user = Depends(get_current_user)):
     user_has_access = await collection_service.get_access_to_collection_for_user(db, collection_add.collection_id, user.id)
     
