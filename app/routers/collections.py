@@ -36,7 +36,7 @@ async def add_to_collection(collection_add: CollectionContentAdd, files: list[Up
 
 @router.get("/{collection.collection_id}/content")
 async def get_collection_content(collection : CollectionContentRead, db: AsyncSession = Depends(get_db), s3: S3Client = Depends(get_s3_client), user = Depends(get_current_user)):
-    user_has_access = await collection_service.get_access_to_collection_for_user(db, collection_add.collection_id, user.id)
+    user_has_access = await collection_service.get_access_to_collection_for_user(db, collection.collection_id, user.id)
     
     if not user_has_access:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="You do not have permissions to access this collection.")
@@ -50,7 +50,7 @@ async def get_collection_content(collection : CollectionContentRead, db: AsyncSe
 
 @router.get("/{collection.collection_id}/file-paths", response_model=list[DotfileOutput])
 async def get_collection_file_paths(collection : CollectionContentRead, db: AsyncSession = Depends(get_db), user = Depends(get_current_user)):
-    user_has_access = await collection_service.get_access_to_collection_for_user(db, collection_add.collection_id, user.id)
+    user_has_access = await collection_service.get_access_to_collection_for_user(db, collection.collection_id, user.id)
     
     if not user_has_access:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="You do not have permissions to access this collection.")
@@ -61,7 +61,7 @@ async def get_collection_file_paths(collection : CollectionContentRead, db: Asyn
 
 @router.delete("/{collection_delete.collection_id}/delete-file")
 async def delete_file_in_collection(collection_delete: CollectionContentDelete, db: AsyncSession = Depends(get_db), s3 : S3Client = Depends(get_s3_client), user = Depends(get_current_user)):
-    user_has_access = await collection_service.get_access_to_collection_for_user(db, collection_add.collection_id, user.id)
+    user_has_access = await collection_service.get_access_to_collection_for_user(db, collection_delete.collection_id, user.id)
     
     if not user_has_access:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="You do not have permissions to access this collection.")
@@ -72,7 +72,7 @@ async def delete_file_in_collection(collection_delete: CollectionContentDelete, 
 
 @router.delete("/{collection.collection_id}/delete-collection")
 async def delete_collection(collection : CollectionDelete, db: AsyncSession = Depends(get_db), s3 : S3Client = Depends(get_s3_client), user = Depends(get_current_user)):
-    user_has_access = await collection_service.get_access_to_collection_for_user(db, collection_add.collection_id, user.id)
+    user_has_access = await collection_service.get_access_to_collection_for_user(db, collection.collection_id, user.id)
     
     if not user_has_access:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="You do not have permissions to access this collection.")
