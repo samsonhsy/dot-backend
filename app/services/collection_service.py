@@ -10,6 +10,9 @@ from sqlalchemy.future import select
 
 from fastapi import UploadFile
 
+import io
+import zipfile
+
 from app.models.dotfiles import Dotfile
 from app.models.collections import Collection
 from app.schemas.collections import CollectionCreate, CollectionContentAdd, CollectionContentRead, CollectionContentDelete, CollectionDelete
@@ -57,18 +60,20 @@ async def get_dotfile_paths_from_collection(db: AsyncSession, collection_read: C
 
     return result
 
-async def get_dotfiles_from_collection(db: AsyncSession, s3: S3Client, collection_read: CollectionContentRead) -> list[StreamingBody]:
+async def get_dotfiles_from_collection(db: AsyncSession, s3: S3Client, collection_read: CollectionContentRead) -> bytes:
     db_dotfiles = await dotfile_service.get_dotfiles_by_collection_id(db, collection_read.collection_id)
 
-    result = []
+    zip_buffer = io.BytesIO()
 
-    for dotfile in db_dotfiles:
-        filename = dotfile_service.generate_dotfile_name_in_collection(collection_read.collection_id, dotfile.filename)
-        file = await file_storage_service.retrieve_file_from_storage_by_filename(s3, filename)
+    with zipfile.ZipFile(zip_buffer, "a", zipfile.ZIP_DEFLATED, False) as zipper:
+        for dotfile in db_dotfiles:
+            filename = dotfile_service.generate_dotfile_name_in_collection(collection_read.collection_id, dotfile.filename)
+            file = await file_storage_service.retrieve_file_from_storage_by_filename(s3, filename)
 
-        result.append(file)
+            content = file.read()
+            zipper.writestr(filename, content)
 
-    return result
+    return zip_buffer.getvalue()
 
 async def delete_from_collection(db: AsyncSession, s3: S3Client, collection_delete: CollectionContentDelete):
     deleted_filename = dotfile_service.generate_dotfile_name_in_collection(collection_delete.collection_id, collection_delete.filename)
