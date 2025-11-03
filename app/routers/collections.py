@@ -35,7 +35,7 @@ async def add_to_collection(collection_add: CollectionContentAdd, files: list[Up
     return result
 
 @router.get("/{collection.collection_id}/content")
-async def get_collection_content(collection : CollectionContentRead, db: AsyncSession = Depends(get_db), user = Depends(get_current_user)):
+async def get_collection_content(collection : CollectionContentRead, db: AsyncSession = Depends(get_db), s3: S3Client = Depends(get_s3_client), user = Depends(get_current_user)):
     user_has_access = await collection_service.get_access_to_collection_for_user(db, collection_add.collection_id, user.id)
     
     if not user_has_access:
