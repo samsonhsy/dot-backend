@@ -1,5 +1,5 @@
 # app/models/collections.py
-from sqlalchemy import Boolean, ForeignKey, Text, Column, Integer, String, TIMESTAMPTZ, func
+from sqlalchemy import Boolean, ForeignKey, Text, Column, Integer, String, TIMESTAMP, func
 from app.db.database import Base
 
 class Collection(Base):
@@ -10,7 +10,7 @@ class Collection(Base):
     description = Column(Text)
     owner_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     is_private = Column(Boolean, nullable=False)
-    created_at = Column(TIMESTAMPTZ, server_default=func.now())
-    updated_at = Column(TIMESTAMPTZ, server_default=func.now())
+    created_at = Column(TIMESTAMP, server_default=func.now())
+    updated_at = Column(TIMESTAMP, server_default=func.now())
 
                 

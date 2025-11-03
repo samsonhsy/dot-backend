@@ -1,7 +1,8 @@
 # app/schemas/collections.py
 from typing import Optional
-from pydantic import BaseModel, datetime
-from schemas.dotfiles import DotfileCreate
+from pydantic import BaseModel
+from datetime import datetime
+from app.schemas.dotfiles import DotfileCreate
 
 class CollectionCreate(BaseModel):
     name : str
