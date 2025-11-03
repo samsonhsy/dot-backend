@@ -18,7 +18,7 @@ async def retrieve_file_from_storage_by_filename(s3 : S3Client, filename : str):
     if not result:
         raise HTTPException(status_code=404, detail=f"File {filename} not found")
 
-    return result 
+    return result["Body"] 
 
 async def delete_file_from_storage_by_filename(s3 : S3Client, filename : str):
     result = await s3.delete_object(Bucket=BUCKET_NAME, Key=filename)
