@@ -12,7 +12,7 @@ from fastapi import UploadFile
 
 from app.models.dotfiles import Dotfile
 from app.models.collections import Collection
-from app.schemas.collections import CollectionCreate, CollectionContentAdd, CollectionContentRead, CollectionContentDelete
+from app.schemas.collections import CollectionCreate, CollectionContentAdd, CollectionContentRead, CollectionContentDelete, CollectionDelete
 
 from app.services import file_storage_service
 from app.services import dotfile_service
@@ -77,5 +77,24 @@ async def delete_from_collection(db: AsyncSession, s3: S3Client, collection_dele
     await dotfile_service.delete_dotfile(db, deleted_filename)
 
     return
+
+async def delete_collection(db: AsyncSession, s3: S3Client, collection: CollectionDelete):
+    # Delete the dotfiles of the collection from the database and s3 buckets 
+    db_dotfiles = await dotfile_service.get_dotfiles_by_collection_id(db, collection.collection_id)
+
+    for dotfile in db_dotfiles:
+        deleted_filename = dotfile_service.generate_dotfile_name_in_collection(collection_read.collection_id, dotfile.filename)
+        await file_storage_service.delete_file_from_storage_by_filename(s3, deleted_filename)
+        await dotfile_service.delete_dotfile(db, deleted_filename)
+
+    # Delete the collection from the database
+    db_collection = (await db.execute(select(Collection).filter(Collection.id == collection.collection_id))).scalars().first()
+    
+    if db_collection:
+        await db.delete(db_collection)
+        await db.commit()
+
+    return
+    
 
 # TO DO: Add update collection content function (Requires communication with front-end team)
