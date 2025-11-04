@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 
 from app.db.database import get_db
-from app.routers import auth, users
+from app.routers import auth, users, collections
 
 app = FastAPI(title="Dot-Backend API")
 
@@ -25,3 +25,4 @@ async def read_root():
 
 app.include_router(auth.router, prefix="/auth", tags=["Authentication"])
 app.include_router(users.router, prefix="/users", tags=["Users"])
+app.include_router(collections.router, prefix="/collections", tags=["Collections"])

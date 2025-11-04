@@ -10,9 +10,12 @@ from sqlalchemy.future import select
 
 from fastapi import UploadFile
 
+import io
+import zipfile
+
 from app.models.dotfiles import Dotfile
 from app.models.collections import Collection
-from app.schemas.collections import CollectionCreate, CollectionContentAdd, CollectionContentRead, CollectionContentDelete
+from app.schemas.collections import CollectionCreate, CollectionContentAdd, CollectionContentRead, CollectionContentDelete, CollectionDelete
 
 from app.services import file_storage_service
 from app.services import dotfile_service
@@ -52,18 +55,25 @@ async def add_to_collection(db: AsyncSession, s3: S3Client, collection_add: Coll
 
     return result
 
-async def get_dotfiles_from_collection(db: AsyncSession, s3: S3Client, collection_read: CollectionContentRead) -> tuple[list[Dotfile], list[StreamingBody]]:
+async def get_dotfile_paths_from_collection(db: AsyncSession, collection_read: CollectionContentRead) -> list[Dotfile]:
+    result = await dotfile_service.get_dotfiles_by_collection_id(db, collection_read.collection_id)
+
+    return result
+
+async def get_dotfiles_from_collection(db: AsyncSession, s3: S3Client, collection_read: CollectionContentRead) -> bytes:
     db_dotfiles = await dotfile_service.get_dotfiles_by_collection_id(db, collection_read.collection_id)
 
-    result = []
+    zip_buffer = io.BytesIO()
 
-    for dotfile in db_dotfiles:
-        filename = dotfile_service.generate_dotfile_name_in_collection(collection_read.collection_id, dotfile.filename)
-        file = await file_storage_service.retrieve_file_from_storage_by_filename(s3, filename)
+    with zipfile.ZipFile(zip_buffer, "a", zipfile.ZIP_DEFLATED, False) as zipper:
+        for dotfile in db_dotfiles:
+            filename = dotfile_service.generate_dotfile_name_in_collection(collection_read.collection_id, dotfile.filename)
+            file = await file_storage_service.retrieve_file_from_storage_by_filename(s3, filename)
 
-        result.append(file)
+            content = file.read()
+            zipper.writestr(filename, content)
 
-    return db_dotfiles, result
+    return zip_buffer.getvalue()
 
 async def delete_from_collection(db: AsyncSession, s3: S3Client, collection_delete: CollectionContentDelete):
     deleted_filename = dotfile_service.generate_dotfile_name_in_collection(collection_delete.collection_id, collection_delete.filename)
@@ -72,5 +82,24 @@ async def delete_from_collection(db: AsyncSession, s3: S3Client, collection_dele
     await dotfile_service.delete_dotfile(db, deleted_filename)
 
     return
+
+async def delete_collection(db: AsyncSession, s3: S3Client, collection: CollectionDelete):
+    # Delete the dotfiles of the collection from the database and s3 buckets 
+    db_dotfiles = await dotfile_service.get_dotfiles_by_collection_id(db, collection.collection_id)
+
+    for dotfile in db_dotfiles:
+        deleted_filename = dotfile_service.generate_dotfile_name_in_collection(collection_read.collection_id, dotfile.filename)
+        await file_storage_service.delete_file_from_storage_by_filename(s3, deleted_filename)
+        await dotfile_service.delete_dotfile(db, deleted_filename)
+
+    # Delete the collection from the database
+    db_collection = (await db.execute(select(Collection).filter(Collection.id == collection.collection_id))).scalars().first()
+    
+    if db_collection:
+        await db.delete(db_collection)
+        await db.commit()
+
+    return
+    
 
 # TO DO: Add update collection content function (Requires communication with front-end team)
