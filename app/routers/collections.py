@@ -26,7 +26,7 @@ async def create_collection(collection : CollectionCreate, db: AsyncSession = De
 @router.post("/{collection_id}/add", response_model=list[DotfileOutput])
 async def add_to_collection(collection_id:int, collection_add: CollectionContentAdd, files: list[UploadFile], db: AsyncSession = Depends(get_db), s3: S3Client = Depends(get_s3_client), user = Depends(get_current_user)):
     collection_add.collection_id = collection_id
-    
+
     user_has_access = await collection_service.get_access_to_collection_for_user(db, collection_add.collection_id, user.id)
     
     if not user_has_access:
@@ -36,8 +36,10 @@ async def add_to_collection(collection_id:int, collection_add: CollectionContent
 
     return result
 
-@router.get("/{collection.collection_id}/content")
-async def get_collection_content(collection : CollectionContentRead, db: AsyncSession = Depends(get_db), s3: S3Client = Depends(get_s3_client), user = Depends(get_current_user)):
+@router.get("/{collection_id}/content")
+async def get_collection_content(collection_id:int, collection : CollectionContentRead, db: AsyncSession = Depends(get_db), s3: S3Client = Depends(get_s3_client), user = Depends(get_current_user)):
+    collection.collection_id = collection_id
+
     user_has_access = await collection_service.get_access_to_collection_for_user(db, collection.collection_id, user.id)
     
     if not user_has_access:
@@ -50,8 +52,10 @@ async def get_collection_content(collection : CollectionContentRead, db: AsyncSe
 
     return Response(content=zipfile, headers=headers, media_type=media_type)
 
-@router.get("/{collection.collection_id}/file-paths", response_model=list[DotfileOutput])
-async def get_collection_file_paths(collection : CollectionContentRead, db: AsyncSession = Depends(get_db), user = Depends(get_current_user)):
+@router.get("/{collection_id}/file-paths", response_model=list[DotfileOutput])
+async def get_collection_file_paths(collection_id:int, collection : CollectionContentRead, db: AsyncSession = Depends(get_db), user = Depends(get_current_user)):
+    collection.collection_id = collection_id
+
     user_has_access = await collection_service.get_access_to_collection_for_user(db, collection.collection_id, user.id)
     
     if not user_has_access:
@@ -61,8 +65,10 @@ async def get_collection_file_paths(collection : CollectionContentRead, db: Asyn
 
     return result
 
-@router.delete("/{collection_delete.collection_id}/delete-file")
-async def delete_file_in_collection(collection_delete: CollectionContentDelete, db: AsyncSession = Depends(get_db), s3 : S3Client = Depends(get_s3_client), user = Depends(get_current_user)):
+@router.delete("/{collection_id}/delete-file")
+async def delete_file_in_collection(collection_id:int, collection_delete: CollectionContentDelete, db: AsyncSession = Depends(get_db), s3 : S3Client = Depends(get_s3_client), user = Depends(get_current_user)):
+    collection_delete.collection_id = collection_id
+    
     user_has_access = await collection_service.get_access_to_collection_for_user(db, collection_delete.collection_id, user.id)
     
     if not user_has_access:
@@ -72,8 +78,10 @@ async def delete_file_in_collection(collection_delete: CollectionContentDelete, 
 
     return {"message" : f"File deleted from collection {collection_delete.collection_id}"}
 
-@router.delete("/{collection.collection_id}/delete-collection")
-async def delete_collection(collection : CollectionDelete, db: AsyncSession = Depends(get_db), s3 : S3Client = Depends(get_s3_client), user = Depends(get_current_user)):
+@router.delete("/{collection_id}/delete-collection")
+async def delete_collection(collection_id:int, collection : CollectionDelete, db: AsyncSession = Depends(get_db), s3 : S3Client = Depends(get_s3_client), user = Depends(get_current_user)):
+    collection.collection_id = collection_id
+    
     user_has_access = await collection_service.get_access_to_collection_for_user(db, collection.collection_id, user.id)
     
     if not user_has_access:
