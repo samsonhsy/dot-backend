@@ -23,8 +23,10 @@ async def get_my_collections(db: AsyncSession = Depends(get_db), user = Depends(
 async def create_collection(collection : CollectionCreate, db: AsyncSession = Depends(get_db), user = Depends(get_current_user)):
     return await collection_service.create_collection(db, collection, user.id)
 
-@router.post("/{collection_add.collection_id}/add", response_model=list[DotfileOutput])
-async def add_to_collection(collection_add: CollectionContentAdd, files: list[UploadFile], db: AsyncSession = Depends(get_db), s3: S3Client = Depends(get_s3_client), user = Depends(get_current_user)):
+@router.post("/{collection_id}/add", response_model=list[DotfileOutput])
+async def add_to_collection(collection_id:int, collection_add: CollectionContentAdd, files: list[UploadFile], db: AsyncSession = Depends(get_db), s3: S3Client = Depends(get_s3_client), user = Depends(get_current_user)):
+    collection_add.collection_id = collection_id
+    
     user_has_access = await collection_service.get_access_to_collection_for_user(db, collection_add.collection_id, user.id)
     
     if not user_has_access:
