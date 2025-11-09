@@ -19,11 +19,11 @@ router = APIRouter()
 async def get_my_collections(db: AsyncSession = Depends(get_db), user = Depends(get_current_user)):
     return await collection_service.get_collections_by_user_id(db, user.id)
 
-@router.post("/create", response_model=CollectionOutput, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=CollectionOutput, status_code=status.HTTP_201_CREATED)
 async def create_collection(collection : CollectionCreate, db: AsyncSession = Depends(get_db), user = Depends(get_current_user)):
     return await collection_service.create_collection(db, collection, user.id)
 
-@router.post("/{collection_id}/add", response_model=list[DotfileOutput], status_code=status.HTTP_201_CREATED)
+@router.post("/{collection_id}/dotfiles", response_model=list[DotfileOutput], status_code=status.HTTP_201_CREATED)
 async def add_to_collection(collection_id:int, collection_add: CollectionContentAdd, files: list[UploadFile], db: AsyncSession = Depends(get_db), s3: S3Client = Depends(get_s3_client), user = Depends(get_current_user)):
     collection_add.collection_id = collection_id
 
@@ -41,7 +41,7 @@ async def add_to_collection(collection_id:int, collection_add: CollectionContent
 
     return result
 
-@router.get("/{collection_id}/content")
+@router.get("/{collection_id}/archive")
 async def get_collection_content(collection_id:int, collection : CollectionContentRead, db: AsyncSession = Depends(get_db), s3: S3Client = Depends(get_s3_client), user = Depends(get_current_user)):
     collection.collection_id = collection_id
 
@@ -62,10 +62,8 @@ async def get_collection_content(collection_id:int, collection : CollectionConte
 
     return Response(content=zipfile, headers=headers, media_type=media_type)
 
-@router.get("/{collection_id}/file-paths", response_model=list[DotfileOutput])
-async def get_collection_file_paths(collection_id:int, collection : CollectionContentRead, db: AsyncSession = Depends(get_db), user = Depends(get_current_user)):
-    collection.collection_id = collection_id
-
+@router.get("/{collection_id}/dotfiles", response_model=list[DotfileOutput])
+async def get_collection_file_paths(collection_id:int, db: AsyncSession = Depends(get_db), user = Depends(get_current_user)):
     # Check if collection exists
     collection_exists = await collection_service.get_collection_by_id(db, collection_id)
     if not collection_exists:
@@ -76,14 +74,12 @@ async def get_collection_file_paths(collection_id:int, collection : CollectionCo
     if not user_has_access:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to access this collection")
 
-    result = await collection_service.get_dotfile_paths_from_collection(db, collection)
+    result = await collection_service.get_dotfile_paths_from_collection(db, collection_id)
 
     return result
 
-@router.delete("/{collection_id}/delete-file", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_file_in_collection(collection_id:int, collection_delete: CollectionContentDelete, db: AsyncSession = Depends(get_db), s3 : S3Client = Depends(get_s3_client), user = Depends(get_current_user)):
-    collection_delete.collection_id = collection_id
-    
+@router.delete("/{collection_id}/dotfiles/{filename}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_file_in_collection(collection_id:int, filename:str, db: AsyncSession = Depends(get_db), s3 : S3Client = Depends(get_s3_client), user = Depends(get_current_user)):
     # Check if collection exists
     collection_exists = await collection_service.get_collection_by_id(db, collection_id)
     if not collection_exists:
@@ -94,14 +90,12 @@ async def delete_file_in_collection(collection_id:int, collection_delete: Collec
     if not user_has_access:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to access this collection")
 
-    await collection_service.delete_from_collection(db, s3, collection_delete)
+    await collection_service.delete_from_collection(db, s3, collection_id, filename)
 
     return
 
-@router.delete("/{collection_id}/delete-collection", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_collection(collection_id:int, collection : CollectionDelete, db: AsyncSession = Depends(get_db), s3 : S3Client = Depends(get_s3_client), user = Depends(get_current_user)):
-    collection.collection_id = collection_id
-    
+@router.delete("/{collection_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_collection(collection_id:int, collection : CollectionDelete, db: AsyncSession = Depends(get_db), s3 : S3Client = Depends(get_s3_client), user = Depends(get_current_user)):    
     # Check if collection exists
     collection_exists = await collection_service.get_collection_by_id(db, collection_id)
     if not collection_exists:

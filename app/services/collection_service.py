@@ -50,16 +50,24 @@ async def create_collection(db: AsyncSession, collection: CollectionCreate, user
 async def add_to_collection(db: AsyncSession, s3: S3Client, collection_add: CollectionContentAdd, files: list[UploadFile]) -> list[Dotfile]:
     # upload the files to s3 bucket
     for file in files:
-        file.filename = dotfile_service.generate_dotfile_name_in_collection(collection_add.collection_id, collection_add.filename)
+        # Generate unique filename for storage
+        storage_filename = dotfile_service.generate_dotfile_name_in_collection(collection_add.collection_id, file.filename)
+        
+        # Temporarily change the filename for storage
+        original_filename = file.filename
+        file.filename = storage_filename
         
         await file_storage_service.upload_file_to_storage(s3, file)
+        
+        # Restore original filename
+        file.filename = original_filename
 
     result = await dotfile_service.create_dotfiles_in_collection(db, collection_add.content, collection_add.collection_id)
 
     return result
 
-async def get_dotfile_paths_from_collection(db: AsyncSession, collection_read: CollectionContentRead) -> list[Dotfile]:
-    result = await dotfile_service.get_dotfiles_by_collection_id(db, collection_read.collection_id)
+async def get_dotfile_paths_from_collection(db: AsyncSession, collection_id: int) -> list[Dotfile]:
+    result = await dotfile_service.get_dotfiles_by_collection_id(db, collection_id)
 
     return result
 
@@ -78,8 +86,8 @@ async def get_dotfiles_from_collection(db: AsyncSession, s3: S3Client, collectio
 
     return zip_buffer.getvalue()
 
-async def delete_from_collection(db: AsyncSession, s3: S3Client, collection_delete: CollectionContentDelete):
-    deleted_filename = dotfile_service.generate_dotfile_name_in_collection(collection_delete.collection_id, collection_delete.filename)
+async def delete_from_collection(db: AsyncSession, s3: S3Client, collection_id: int, filename: str):
+    deleted_filename = dotfile_service.generate_dotfile_name_in_collection(collection_id, filename)
     
     await file_storage_service.delete_file_from_storage_by_filename(s3, deleted_filename)
     await dotfile_service.delete_dotfile(db, deleted_filename)
