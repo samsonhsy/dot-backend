@@ -24,6 +24,9 @@ async def get_access_to_collection_for_user(db: AsyncSession, collection_id: int
     result = await db.execute(select(Collection).filter(Collection.id == collection_id))
     collection = result.scalars().first()
 
+    if not collection:
+        return False
+
     if not collection.is_private:
         return True
 
@@ -88,7 +91,7 @@ async def delete_collection(db: AsyncSession, s3: S3Client, collection: Collecti
     db_dotfiles = await dotfile_service.get_dotfiles_by_collection_id(db, collection.collection_id)
 
     for dotfile in db_dotfiles:
-        deleted_filename = dotfile_service.generate_dotfile_name_in_collection(collection_read.collection_id, dotfile.filename)
+        deleted_filename = dotfile_service.generate_dotfile_name_in_collection(collection.collection_id, dotfile.filename)
         await file_storage_service.delete_file_from_storage_by_filename(s3, deleted_filename)
         await dotfile_service.delete_dotfile(db, deleted_filename)
 
