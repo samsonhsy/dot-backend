@@ -25,7 +25,27 @@ async def create_collection(collection : CollectionCreate, db: AsyncSession = De
 
 @router.post("/{collection_id}/dotfiles", response_model=list[DotfileOutput], status_code=status.HTTP_201_CREATED)
 async def add_to_collection(collection_id:int, collection_add: CollectionContentAdd, files: list[UploadFile], db: AsyncSession = Depends(get_db), s3: S3Client = Depends(get_s3_client), user = Depends(get_current_user)):
+    """
+    Add dotfiles to a collection.
+    The 'content' list in the request body must match the 'files' list in order:
+    - content[0] describes files[0]
+    """
     collection_add.collection_id = collection_id
+
+    # Validate that files and content lists match
+    if len(files) != len(collection_add.content):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Number of files ({len(files)}) must match number of content entries ({len(collection_add.content)})"
+        )
+    
+    # Validate that filenames match (to catch coordination errors)
+    for i, (file, content) in enumerate(zip(files, collection_add.content)):
+        if file.filename != content.filename:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Filename mismatch at index {i}: uploaded file is '{file.filename}' but content specifies '{content.filename}'"
+            )
 
     # Check if collection exists
     collection_exists = await collection_service.get_collection_by_id(db, collection_id)
