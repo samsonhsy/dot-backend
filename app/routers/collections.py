@@ -19,11 +19,11 @@ router = APIRouter()
 async def get_my_collections(db: AsyncSession = Depends(get_db), user = Depends(get_current_user)):
     return await collection_service.get_collections_by_user_id(db, user.id)
 
-@router.post("/create", response_model=CollectionOutput)
+@router.post("/create", response_model=CollectionOutput, status_code=status.HTTP_201_CREATED)
 async def create_collection(collection : CollectionCreate, db: AsyncSession = Depends(get_db), user = Depends(get_current_user)):
     return await collection_service.create_collection(db, collection, user.id)
 
-@router.post("/{collection_id}/add", response_model=list[DotfileOutput])
+@router.post("/{collection_id}/add", response_model=list[DotfileOutput], status_code=status.HTTP_201_CREATED)
 async def add_to_collection(collection_id:int, collection_add: CollectionContentAdd, files: list[UploadFile], db: AsyncSession = Depends(get_db), s3: S3Client = Depends(get_s3_client), user = Depends(get_current_user)):
     collection_add.collection_id = collection_id
 
@@ -80,7 +80,7 @@ async def get_collection_file_paths(collection_id:int, collection : CollectionCo
 
     return result
 
-@router.delete("/{collection_id}/delete-file")
+@router.delete("/{collection_id}/delete-file", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_file_in_collection(collection_id:int, collection_delete: CollectionContentDelete, db: AsyncSession = Depends(get_db), s3 : S3Client = Depends(get_s3_client), user = Depends(get_current_user)):
     collection_delete.collection_id = collection_id
     
@@ -96,9 +96,9 @@ async def delete_file_in_collection(collection_id:int, collection_delete: Collec
 
     await collection_service.delete_from_collection(db, s3, collection_delete)
 
-    return {"message" : f"File deleted from collection {collection_delete.collection_id}"}
+    return
 
-@router.delete("/{collection_id}/delete-collection")
+@router.delete("/{collection_id}/delete-collection", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_collection(collection_id:int, collection : CollectionDelete, db: AsyncSession = Depends(get_db), s3 : S3Client = Depends(get_s3_client), user = Depends(get_current_user)):
     collection.collection_id = collection_id
     
@@ -114,4 +114,4 @@ async def delete_collection(collection_id:int, collection : CollectionDelete, db
 
     await collection_service.delete_collection(db, s3, collection)
 
-    return {"message": f"Collection deleted"}
+    return
