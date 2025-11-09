@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.database import get_db
 from app.s3.s3_bucket import get_s3_client
 
-from app.schemas.collections import CollectionCreate, CollectionDelete, CollectionContentRead, CollectionContentDelete, CollectionContentAdd, CollectionOutput
+from app.schemas.collections import CollectionCreate, CollectionContentRead, CollectionContentDelete, CollectionContentAdd, CollectionOutput
 from app.schemas.dotfiles import DotfileOutput
 from app.services import collection_service
 from app.services.auth_service import get_current_user
@@ -115,7 +115,7 @@ async def delete_file_in_collection(collection_id:int, filename:str, db: AsyncSe
     return
 
 @router.delete("/{collection_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_collection(collection_id:int, collection : CollectionDelete, db: AsyncSession = Depends(get_db), s3 : S3Client = Depends(get_s3_client), user = Depends(get_current_user)):    
+async def delete_collection(collection_id:int, db: AsyncSession = Depends(get_db), s3 : S3Client = Depends(get_s3_client), user = Depends(get_current_user)):    
     # Check if collection exists
     collection_exists = await collection_service.get_collection_by_id(db, collection_id)
     if not collection_exists:
@@ -126,6 +126,6 @@ async def delete_collection(collection_id:int, collection : CollectionDelete, db
     if not user_has_access:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to access this collection")
 
-    await collection_service.delete_collection(db, s3, collection)
+    await collection_service.delete_collection(db, s3, collection_id)
 
     return
