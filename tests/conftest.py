@@ -57,3 +57,11 @@ async def mock_client(db_session):
     
     with TestClient(app) as mock_client:
         yield mock_client
+
+@pytest.fixture()
+def user_create_payload():
+    return {
+        "username":"mock_user",
+        "email": "mock_email@email.com",
+        "password": "mock_password"
+    }
