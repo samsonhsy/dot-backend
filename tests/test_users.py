@@ -56,3 +56,55 @@ def test_invalid_email_register(mock_client, user_create_payload):
     invalid_email_register_status_code = invalid_email_register_response.status_code
     assert invalid_email_register_status_code == 422
 
+def test_user_list(mock_client, user_create_payload):
+    # get list of users when there are no registered users
+    empty_get_user_list_response = mock_client.get(PREFIX + "/")
+    
+    empty_get_user_list_status_code = empty_get_user_list_response.status_code
+    assert empty_get_user_list_status_code == 200
+
+    empty_get_user_list_response_json = empty_get_user_list_response.json()
+    assert len(empty_get_user_list_response_json) == 0
+    
+    # create a first user
+    first_user_create_response = mock_client.post(PREFIX + "/register", json=user_create_payload)
+    
+    first_user_create_status_code = first_user_create_response.status_code
+    assert first_user_create_status_code == 201
+
+    # get list of users after first user registration
+    first_get_user_list_response = mock_client.get(PREFIX + "/")
+    
+    first_get_user_list_status_code = first_get_user_list_response.status_code
+    assert first_get_user_list_status_code == 200
+
+    first_get_user_list_response_json = first_get_user_list_response.json()
+    assert len(first_get_user_list_response_json) == 1
+    assert first_get_user_list_response_json[0]["username"] == user_create_payload["username"]
+    assert first_get_user_list_response_json[0]["email"] == user_create_payload["email"]
+    assert first_get_user_list_response_json[0]["id"] == 1
+
+    # create a second user
+    new_user_create_payload = user_create_payload.copy()
+    new_user_create_payload["username"] = "new_mock_username"
+    new_user_create_payload["email"] = "new_mock_email@email.com"
+
+    second_user_create_response = mock_client.post(PREFIX + "/register", json=new_user_create_payload)
+    
+    second_user_create_status_code = second_user_create_response.status_code
+    assert second_user_create_status_code == 201
+
+    # get list of users after second user registration
+    second_get_user_list_response = mock_client.get(PREFIX + "/")
+    
+    second_get_user_list_status_code = second_get_user_list_response.status_code
+    assert second_get_user_list_status_code == 200
+    
+    second_get_user_list_response_json = second_get_user_list_response.json()
+    assert len(second_get_user_list_response_json) == 2
+    assert second_get_user_list_response_json[0]["username"] == user_create_payload["username"]
+    assert second_get_user_list_response_json[0]["email"] == user_create_payload["email"]
+    assert second_get_user_list_response_json[0]["id"] == 1
+    assert second_get_user_list_response_json[1]["username"] == new_user_create_payload["username"]
+    assert second_get_user_list_response_json[1]["email"] == new_user_create_payload["email"]
+    assert second_get_user_list_response_json[1]["id"] == 2
