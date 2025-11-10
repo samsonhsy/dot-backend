@@ -108,3 +108,27 @@ def test_user_list(mock_client, user_create_payload):
     assert second_get_user_list_response_json[1]["username"] == new_user_create_payload["username"]
     assert second_get_user_list_response_json[1]["email"] == new_user_create_payload["email"]
     assert second_get_user_list_response_json[1]["id"] == 2
+
+def test_user_delete(mock_client, user_create_payload):
+    # create a user
+    user_create_response = mock_client.post(PREFIX + "/register", json=user_create_payload)
+    
+    user_create_status_code = user_create_response.status_code
+    assert user_create_status_code == 201
+
+    user_id = user_create_response.json()["id"]
+
+    # delete the user
+    user_delete_response = mock_client.delete(PREFIX + f"/{user_id}")
+
+    user_delete_status_code = user_delete_response.status_code
+    assert user_delete_status_code == 200
+
+    # check if user is still registered
+    get_user_list_response = mock_client.get(PREFIX + "/")
+    
+    get_user_list_status_code = get_user_list_response.status_code
+    assert get_user_list_status_code == 200
+
+    get_user_list_response_json = get_user_list_response.json()
+    assert len(get_user_list_response_json) == 0
