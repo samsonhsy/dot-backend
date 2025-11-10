@@ -132,3 +132,30 @@ def test_user_delete(mock_client, user_create_payload):
 
     get_user_list_response_json = get_user_list_response.json()
     assert len(get_user_list_response_json) == 0
+
+def test_get_current_user_info(mock_client, user_create_payload, user_login_payload):
+    # create a user
+    user_create_response = mock_client.post(PREFIX + "/register", json=user_create_payload)
+    
+    user_create_status_code = user_create_response.status_code
+    assert user_create_status_code == 201
+
+    # get a jwt token
+    get_token_response = mock_client.post("/auth/token", data=user_login_payload, headers={"content-type": "application/x-www-form-urlencoded"})
+    
+    get_token_status_code = get_token_response.status_code    
+    assert get_token_status_code == 200
+
+    access_token = get_token_response.json()["access_token"]
+
+    # get current user info
+    current_user_info_response = mock_client.get(PREFIX + "/me", headers={"Authorization":f"Bearer {access_token}"})
+    
+    current_user_info_status_code = current_user_info_response.status_code
+    assert current_user_info_status_code == 200
+    
+    current_user_info_response_json = current_user_info_response.json()
+    assert current_user_info_response_json["username"] == user_create_payload["username"]
+    assert current_user_info_response_json["email"] == user_create_payload["email"]
+
+

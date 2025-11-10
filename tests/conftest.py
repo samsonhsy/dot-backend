@@ -65,3 +65,11 @@ def user_create_payload():
         "email": "mock_email@email.com",
         "password": "mock_password"
     }
+
+@pytest.fixture()
+def user_login_payload():
+    return {
+        "username":"mock_email@email.com",
+        "password": "mock_password",
+    }
+         
