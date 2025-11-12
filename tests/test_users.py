@@ -3,6 +3,7 @@ USERS_PREFIX = "/users"
 AUTH_PREFIX = "/auth"
 
 def test_valid_register(mock_client, user_create_payload):
+    # register the user
     response = mock_client.post(USERS_PREFIX + "/register", json=user_create_payload)
     
     status_code = response.status_code    
@@ -26,11 +27,13 @@ def test_valid_register(mock_client, user_create_payload):
     assert get_user_list_response_json[0]["id"] == 1
 
 def test_duplicate_username_register(mock_client, user_create_payload):
+    # register a user
     original_register_response = mock_client.post(USERS_PREFIX + "/register", json=user_create_payload)
 
     original_register_status_code = original_register_response.status_code
     assert original_register_status_code == 201
 
+    # attempt to register a user with the same username but different email
     duplicate_username_create_payload = user_create_payload.copy()
     duplicate_username_create_payload["email"] = "new_mock_email@email.com"
 
@@ -43,11 +46,13 @@ def test_duplicate_username_register(mock_client, user_create_payload):
     assert duplicate_username_register_response_json["detail"] == "Username already exists"
 
 def test_duplicate_email_register(mock_client, user_create_payload):
+    # register a user
     original_register_response = mock_client.post(USERS_PREFIX + "/register", json=user_create_payload)
 
     original_register_status_code = original_register_response.status_code
     assert original_register_status_code == 201
 
+    # attempt to register a user with the same email but different username
     duplicate_email_create_payload = user_create_payload.copy()
     duplicate_email_create_payload["username"] = "new_mock_username"
 
@@ -60,6 +65,7 @@ def test_duplicate_email_register(mock_client, user_create_payload):
     assert duplicate_email_register_response_json["detail"] == "Email already registered"
 
 def test_invalid_email_register(mock_client, user_create_payload):
+    # register a user with an invalid email format
     incorrect_user_create_payload = user_create_payload.copy()
     incorrect_user_create_payload["email"] = "invalid_mock_email"
     
@@ -146,6 +152,7 @@ def test_user_delete(mock_client, user_create_payload):
     assert len(get_user_list_response_json) == 0
 
 def test_invalid_user_delete(mock_client):
+    # attempt to delete a user with non-existing user id
     invalid_user_id = 1
     user_delete_response = mock_client.delete(USERS_PREFIX + f"/{invalid_user_id}")
 
