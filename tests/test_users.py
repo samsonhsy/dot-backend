@@ -145,6 +145,16 @@ def test_user_delete(mock_client, user_create_payload):
     get_user_list_response_json = get_user_list_response.json()
     assert len(get_user_list_response_json) == 0
 
+def test_invalid_user_delete(mock_client):
+    invalid_user_id = 1
+    user_delete_response = mock_client.delete(USERS_PREFIX + f"/{invalid_user_id}")
+
+    user_delete_status_code = user_delete_response.status_code
+    assert user_delete_status_code == 404
+
+    user_delete_response_json = user_delete_response.json()
+    assert user_delete_response_json["detail"] == "User not found"
+
 def test_get_current_user_info(mock_client, user_create_payload, user_login_payload):
     # create a user
     user_create_response = mock_client.post(USERS_PREFIX + "/register", json=user_create_payload)
