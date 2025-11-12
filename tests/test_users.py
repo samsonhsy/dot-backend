@@ -4,16 +4,16 @@ AUTH_PREFIX = "/auth"
 
 def test_valid_register(mock_client, user_create_payload):
     # register the user
-    response = mock_client.post(USERS_PREFIX + "/register", json=user_create_payload)
+    user_register_response = mock_client.post(USERS_PREFIX + "/register", json=user_create_payload)
     
-    status_code = response.status_code    
-    assert status_code == 201
+    user_register_status_code = user_register_response.status_code    
+    assert user_register_status_code == 201
 
-    response_json = response.json()
+    user_register_json = user_register_response.json()
 
-    assert response_json["username"] == user_create_payload["username"]
-    assert response_json["email"] == user_create_payload["email"]
-    assert response_json["id"] == 1
+    assert user_register_json["username"] == user_create_payload["username"]
+    assert user_register_json["email"] == user_create_payload["email"]
+    assert user_register_json["id"] == 1
 
     # check if user exists in database after registration
     get_user_list_response = mock_client.get(USERS_PREFIX + "/")
@@ -127,7 +127,7 @@ def test_user_list(mock_client, user_create_payload):
     assert second_get_user_list_response_json[1]["email"] == new_user_create_payload["email"]
     assert second_get_user_list_response_json[1]["id"] == 2
 
-def test_user_delete(mock_client, user_create_payload):
+def test_valid_user_delete(mock_client, user_create_payload):
     # create a user
     user_create_response = mock_client.post(USERS_PREFIX + "/register", json=user_create_payload)
     
