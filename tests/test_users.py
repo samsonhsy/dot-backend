@@ -14,6 +14,17 @@ def test_valid_register(mock_client, user_create_payload):
     assert response_json["email"] == user_create_payload["email"]
     assert response_json["id"] == 1
 
+    # check if user exists in database after registration
+    get_user_list_response = mock_client.get(USERS_PREFIX + "/")
+    
+    get_user_list_status_code = get_user_list_response.status_code
+    assert get_user_list_status_code == 200
+
+    get_user_list_response_json = get_user_list_response.json()
+    assert get_user_list_response_json[0]["username"] == user_create_payload["username"]
+    assert get_user_list_response_json[0]["email"] == user_create_payload["email"]
+    assert get_user_list_response_json[0]["id"] == 1
+
 def test_duplicate_username_register(mock_client, user_create_payload):
     original_register_response = mock_client.post(USERS_PREFIX + "/register", json=user_create_payload)
 
