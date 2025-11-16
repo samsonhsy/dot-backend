@@ -10,8 +10,6 @@ class CollectionCreate(BaseModel):
     is_private : Optional[bool] = True
 
 class CollectionContentAdd(BaseModel):
-    """Schema for adding dotfiles to a collection. 
-    The content list should match the uploaded files list in order."""
     content : list[DotfileCreate]
 
 class CollectionContentDelete(BaseModel):

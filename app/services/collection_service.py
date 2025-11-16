@@ -20,6 +20,7 @@ from app.schemas.collections import CollectionCreate, CollectionContentAdd, Coll
 from app.services import file_storage_service
 from app.services import dotfile_service
 
+# checks if a user has access to a collection (public or owned by user)
 async def get_access_to_collection_for_user(db: AsyncSession, collection_id: int, user_id: int) -> bool:
     result = await db.execute(select(Collection).filter(Collection.id == collection_id))
     collection = result.scalars().first()
@@ -34,10 +35,12 @@ async def get_access_to_collection_for_user(db: AsyncSession, collection_id: int
 
     return user_is_owner
 
+# retrieves all collections owned by a user
 async def get_collections_by_user_id(db: AsyncSession, user_id: int) -> Optional[list[Collection]]:
     result = await db.execute(select(Collection).filter(Collection.owner_id == user_id))
     return result.scalars().all()
 
+# creates a collection db record in the collection table
 async def create_collection(db: AsyncSession, collection: CollectionCreate, user_id: int) -> Collection:
     db_collection = Collection(name=collection.name, description=collection.description, is_private=collection.is_private, owner_id=user_id)
     db.add(db_collection)
@@ -47,6 +50,7 @@ async def create_collection(db: AsyncSession, collection: CollectionCreate, user
 
     return db_collection
 
+# adds files to a collection: uploads to s3 with storage filename and creates dotfile records in db with original filename
 async def add_to_collection(db: AsyncSession, s3: S3Client, collection_add: CollectionContentAdd, files: list[UploadFile]) -> list[Dotfile]:
     # upload the files to s3 bucket
     for file in files:
@@ -66,11 +70,13 @@ async def add_to_collection(db: AsyncSession, s3: S3Client, collection_add: Coll
 
     return result
 
-async def get_dotfile_paths_from_collection(db: AsyncSession, collection_id: int) -> list[Dotfile]:
+# retrieves dotfile from a collection
+async def get_dotfile_from_collection(db: AsyncSession, collection_id: int) -> list[Dotfile]:
     result = await dotfile_service.get_dotfiles_by_collection_id(db, collection_id)
 
     return result
 
+# retrieves dotfiles from a collection as a zip archive
 async def get_dotfiles_from_collection(db: AsyncSession, s3: S3Client, collection_read: CollectionContentRead) -> bytes:
     db_dotfiles = await dotfile_service.get_dotfiles_by_collection_id(db, collection_read.collection_id)
 
@@ -81,11 +87,12 @@ async def get_dotfiles_from_collection(db: AsyncSession, s3: S3Client, collectio
             filename = dotfile_service.generate_dotfile_name_in_collection(collection_read.collection_id, dotfile.filename)
             file = await file_storage_service.retrieve_file_from_storage_by_filename(s3, filename)
 
-            content = file.read()
+            content = await file.read()
             zipper.writestr(filename, content)
 
     return zip_buffer.getvalue()
 
+# deletes a dotfile from a collection - both from s3 and db
 async def delete_from_collection(db: AsyncSession, s3: S3Client, collection_id: int, filename: str):
     deleted_filename = dotfile_service.generate_dotfile_name_in_collection(collection_id, filename)
     
@@ -94,8 +101,8 @@ async def delete_from_collection(db: AsyncSession, s3: S3Client, collection_id: 
 
     return
 
+# deletes an entire collection - both from s3 and db
 async def delete_collection(db: AsyncSession, s3: S3Client, collection_id: int):
-    # Delete the dotfiles of the collection from the database and s3 buckets 
     db_dotfiles = await dotfile_service.get_dotfiles_by_collection_id(db, collection_id)
 
     for dotfile in db_dotfiles:
