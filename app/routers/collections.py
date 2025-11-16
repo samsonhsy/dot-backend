@@ -26,7 +26,10 @@ async def get_my_collections(db: AsyncSession = Depends(get_db), user = Depends(
 @router.post("/", response_model=CollectionOutput, status_code=status.HTTP_201_CREATED)
 async def create_collection(collection : CollectionCreate, db: AsyncSession = Depends(get_db), user = Depends(get_current_user)):
     '''Creates a new collection owned by the current user'''
-    return await collection_service.create_collection(db, collection, user.id)
+    db_collection = await collection_service.create_collection(db, collection, user.id)
+
+    # Convert ORM object to Pydantic model so FastAPI/Swagger can serialize it reliably
+    return CollectionOutput.model_validate(db_collection)
 
 @router.post("/{collection_id}/dotfiles", response_model=list[DotfileOutput], status_code=status.HTTP_201_CREATED)
 async def add_to_collection(
