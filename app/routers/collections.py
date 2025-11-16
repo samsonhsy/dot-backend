@@ -31,8 +31,21 @@ async def create_collection(collection : CollectionCreate, db: AsyncSession = De
 @router.post("/{collection_id}/dotfiles", response_model=list[DotfileOutput], status_code=status.HTTP_201_CREATED)
 async def add_to_collection(
     collection_id:int,
-    collection_add_payload: Annotated[str, Form(...)],
-    files: list[UploadFile] = File(...),
+    collection_add_payload: Annotated[
+        str,
+        Form(
+            ...,
+            description=(
+                "JSON body describing each file, e.g. "
+                "{\"collection_id\":3,\"content\":[{\"path\":\"/home/user/.zshrc\",\"filename\":\".zshrc\"},"
+                "{\"path\":\"/home/user/.vimrc\",\"filename\":\".vimrc\"}]}"
+            )
+        )
+    ],
+    files: list[UploadFile] = File(
+        ...,
+        description="Upload files in the same order as content"
+    ),
     db: AsyncSession = Depends(get_db),
     s3: S3Client = Depends(get_s3_client),
     user = Depends(get_current_user)
