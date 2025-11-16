@@ -100,9 +100,10 @@ async def add_to_collection(
     return [DotfileOutput.model_validate(dotfile) for dotfile in result]
 
 @router.get("/{collection_id}/archive")
-async def get_collection_content(collection_id:int, collection : CollectionContentRead, db: AsyncSession = Depends(get_db), s3: S3Client = Depends(get_s3_client), user = Depends(get_current_user)):
+async def get_collection_content(collection_id:int, db: AsyncSession = Depends(get_db), s3: S3Client = Depends(get_s3_client), user = Depends(get_current_user)):
     '''Retrieves all dotfiles from a collection as a zip archive'''
-    collection.collection_id = collection_id
+    # GET requests cannot have a body; construct the read model from the path param instead
+    collection = CollectionContentRead(collection_id=collection_id)
 
     # Check if collection exists
     collection_exists = await collection_service.get_collection_by_id(db, collection_id)
