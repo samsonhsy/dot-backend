@@ -15,23 +15,19 @@ async def get_dotfiles_by_collection_id(db: AsyncSession, collection_id: int) ->
     return result.scalars().all()
 
 # creates dotfile records in the dotfile table 
-async def create_dotfiles_in_collection(db: AsyncSession, dotfiles : list[DotfileCreate]) -> list[Dotfile]:
+async def create_dotfiles_in_collection(db: AsyncSession, collection_id:int, dotfiles : list[DotfileCreate]) -> list[Dotfile]:
     db_dotfiles = [] 
     
     for dotfile in dotfiles:
-        db_dotfile = Dotfile(path=dotfile.path, filename=dotfile.filename)
+        db_dotfile = Dotfile(collection_id=collection_id, path=dotfile.path, filename=dotfile.filename)
         db_dotfiles.append(db_dotfile)
     db.add_all(db_dotfiles)
 
     await db.commit()
-    # refresh all dotfile row entries created
-    refresh_statement = (
-    select(Dotfile)
-    .where(Dotfile.id.in_([db_dotfile.id for db_dotfile in db_dotfiles]))
-    .execution_options(populate_existing=True)
-    )
-    
-    await db.execute(refresh_statement)
+
+    for db_dotfile in db_dotfiles:
+        await db.refresh(db_dotfile)
+
     return db_dotfiles
 
 # deletes a dotfile record from the dotfile table

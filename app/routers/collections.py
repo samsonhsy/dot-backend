@@ -1,5 +1,8 @@
 # app/routers/collections.py
-from fastapi import APIRouter, Depends, HTTPException, Response, UploadFile, status
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, HTTPException, Response, UploadFile, status, File, Form
+from pydantic import ValidationError
 
 import aioboto3
 from aiobotocore.session import ClientCreatorContext as S3Client
@@ -26,13 +29,30 @@ async def create_collection(collection : CollectionCreate, db: AsyncSession = De
     return await collection_service.create_collection(db, collection, user.id)
 
 @router.post("/{collection_id}/dotfiles", response_model=list[DotfileOutput], status_code=status.HTTP_201_CREATED)
-async def add_to_collection(collection_id:int, collection_add: CollectionContentAdd, files: list[UploadFile], db: AsyncSession = Depends(get_db), s3: S3Client = Depends(get_s3_client), user = Depends(get_current_user)):
+async def add_to_collection(
+    collection_id:int,
+    collection_add_payload: Annotated[str, Form(...)],
+    files: list[UploadFile] = File(...),
+    db: AsyncSession = Depends(get_db),
+    s3: S3Client = Depends(get_s3_client),
+    user = Depends(get_current_user)
+):
     """
     Add dotfiles to a collection.
     The 'content' list in the request body must match the 'files' list in order, 
     e.g. content[0] describes files[0]
     """
-    collection_add.collection_id = collection_id
+    try:
+        collection_add = CollectionContentAdd.model_validate_json(collection_add_payload)
+    except ValidationError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=exc.errors())
+
+    # Ensure the body points to the same collection as the URL
+    if collection_add.collection_id != collection_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Body collection_id ({collection_add.collection_id}) must match URL collection_id ({collection_id})"
+        )
 
     # Validate that files and content lists match
     if len(files) != len(collection_add.content):
@@ -61,7 +81,7 @@ async def add_to_collection(collection_id:int, collection_add: CollectionContent
 
     result = await collection_service.add_to_collection(db, s3, collection_add, files)
 
-    return result
+    return [DotfileOutput.model_validate(dotfile) for dotfile in result]
 
 @router.get("/{collection_id}/archive")
 async def get_collection_content(collection_id:int, collection : CollectionContentRead, db: AsyncSession = Depends(get_db), s3: S3Client = Depends(get_s3_client), user = Depends(get_current_user)):

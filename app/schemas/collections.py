@@ -10,6 +10,7 @@ class CollectionCreate(BaseModel):
     is_private : Optional[bool] = True
 
 class CollectionContentAdd(BaseModel):
+    collection_id : int
     content : list[DotfileCreate]
 
 class CollectionContentDelete(BaseModel):

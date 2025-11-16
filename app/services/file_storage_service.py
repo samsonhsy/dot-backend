@@ -9,7 +9,14 @@ async def upload_file_to_storage(s3 : S3Client, file : UploadFile):
     if not file:
         raise HTTPException(status_code=400, detail="Uploaded file does not exist")
 
-    result = await s3.put_object(Body=file, Bucket=BUCKET_NAME, Key=file.filename)
+    file_contents = await file.read()
+    if file_contents is None:
+        raise HTTPException(status_code=400, detail="Uploaded file is empty")
+
+    result = await s3.put_object(Body=file_contents, Bucket=BUCKET_NAME, Key=file.filename)
+
+    # Reset pointer so the caller can re-read the file if needed
+    await file.seek(0)
 
     return result  
 

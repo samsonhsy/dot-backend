@@ -9,6 +9,7 @@ from aiobotocore.response import StreamingBody
 from sqlalchemy.future import select
 
 from fastapi import UploadFile
+from fastapi import HTTPException
 
 import io
 import zipfile
@@ -34,6 +35,11 @@ async def get_access_to_collection_for_user(db: AsyncSession, collection_id: int
     user_is_owner = (collection.owner_id == user_id)
 
     return user_is_owner
+
+# retrieves a collection by its id
+async def get_collection_by_id(db: AsyncSession, collection_id: int) -> Optional[Collection]:
+    result = await db.execute(select(Collection).filter(Collection.id == collection_id))
+    return result.scalars().first()
 
 # retrieves all collections owned by a user
 async def get_collections_by_user_id(db: AsyncSession, user_id: int) -> Optional[list[Collection]]:
@@ -66,7 +72,12 @@ async def add_to_collection(db: AsyncSession, s3: S3Client, collection_add: Coll
         # Restore original filename
         file.filename = original_filename
 
-    result = await dotfile_service.create_dotfiles_in_collection(db, collection_add.content, collection_add.collection_id)
+    try:
+        result = await dotfile_service.create_dotfiles_in_collection(db, collection_add.collection_id, collection_add.content)
+    except Exception as exc:
+        # Roll back so the session doesn't remain in a broken state
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to persist dotfiles: {exc}") from exc
 
     return result
 

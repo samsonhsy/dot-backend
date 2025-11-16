@@ -4,20 +4,34 @@ from sqlalchemy import text
 
 from app.db.database import get_db
 from app.routers import auth, users, collections
+from app.s3.s3_bucket import check_storage_health
 
 app = FastAPI(title="Dot-Backend API")
 
 @app.get("/api/healthcheck")
 async def healthcheck(db: AsyncSession = Depends(get_db)):
+    errors = {}
+
     try:
         result = await db.execute(text("SELECT 1"))
         if result.scalar_one_or_none() is None:
-            raise HTTPException(status_code=500, 
-                            detail="Database connection failed")
-        return {"status": "ok", "database_status": "connected"}
+            errors["database"] = "Database connection failed"
     except Exception as e:
-        raise HTTPException(status_code=500, 
-                            detail=f"Database connection error: {str(e)}")
+        errors["database"] = f"Database connection error: {str(e)}"
+
+    try:
+        await check_storage_health()
+    except Exception as e:
+        errors["storage"] = f"Storage connection error: {str(e)}"
+
+    if errors:
+        raise HTTPException(status_code=500, detail=errors)
+
+    return {
+        "status": "ok",
+        "database_status": "connected",
+        "storage_status": "connected",
+    }
 
 @app.get("/")
 async def read_root():
