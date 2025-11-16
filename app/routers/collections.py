@@ -26,7 +26,10 @@ async def get_my_collections(db: AsyncSession = Depends(get_db), user = Depends(
 @router.post("/", response_model=CollectionOutput, status_code=status.HTTP_201_CREATED)
 async def create_collection(collection : CollectionCreate, db: AsyncSession = Depends(get_db), user = Depends(get_current_user)):
     '''Creates a new collection owned by the current user'''
-    return await collection_service.create_collection(db, collection, user.id)
+    db_collection = await collection_service.create_collection(db, collection, user.id)
+
+    # Convert ORM object to Pydantic model so FastAPI/Swagger can serialize it reliably
+    return CollectionOutput.model_validate(db_collection)
 
 @router.post("/{collection_id}/dotfiles", response_model=list[DotfileOutput], status_code=status.HTTP_201_CREATED)
 async def add_to_collection(
@@ -94,12 +97,23 @@ async def add_to_collection(
 
     result = await collection_service.add_to_collection(db, s3, collection_add, files)
 
-    return [DotfileOutput.model_validate(dotfile) for dotfile in result]
+    # Validate and convert ORM objects to plain dicts for reliable JSON serialization
+    dotfile_outputs = []
+    try:
+        for dotfile in result:
+            df = DotfileOutput.model_validate(dotfile)
+            dotfile_outputs.append(df.model_dump())
+    except Exception as exc:
+        # If something goes wrong serializing the DB objects, return 500 with details
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to serialize dotfiles: {exc}") from exc
+
+    return dotfile_outputs
 
 @router.get("/{collection_id}/archive")
-async def get_collection_content(collection_id:int, collection : CollectionContentRead, db: AsyncSession = Depends(get_db), s3: S3Client = Depends(get_s3_client), user = Depends(get_current_user)):
+async def get_collection_content(collection_id:int, db: AsyncSession = Depends(get_db), s3: S3Client = Depends(get_s3_client), user = Depends(get_current_user)):
     '''Retrieves all dotfiles from a collection as a zip archive'''
-    collection.collection_id = collection_id
+    # GET requests cannot have a body; construct the read model from the path param instead
+    collection = CollectionContentRead(collection_id=collection_id)
 
     # Check if collection exists
     collection_exists = await collection_service.get_collection_by_id(db, collection_id)
