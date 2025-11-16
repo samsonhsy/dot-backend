@@ -97,7 +97,17 @@ async def add_to_collection(
 
     result = await collection_service.add_to_collection(db, s3, collection_add, files)
 
-    return [DotfileOutput.model_validate(dotfile) for dotfile in result]
+    # Validate and convert ORM objects to plain dicts for reliable JSON serialization
+    dotfile_outputs = []
+    try:
+        for dotfile in result:
+            df = DotfileOutput.model_validate(dotfile)
+            dotfile_outputs.append(df.model_dump())
+    except Exception as exc:
+        # If something goes wrong serializing the DB objects, return 500 with details
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to serialize dotfiles: {exc}") from exc
+
+    return dotfile_outputs
 
 @router.get("/{collection_id}/archive")
 async def get_collection_content(collection_id:int, db: AsyncSession = Depends(get_db), s3: S3Client = Depends(get_s3_client), user = Depends(get_current_user)):
