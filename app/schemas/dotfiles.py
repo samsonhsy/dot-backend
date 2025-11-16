@@ -1,12 +1,12 @@
 # app/schemas/dotfiles.py
-from pydantic import BaseModel, FilePath
+from pydantic import BaseModel
 
 class DotfileCreate(BaseModel):
-    path : FilePath
+    path : str
     filename : str
 
 class DotfileOutput(BaseModel):
-    path: FilePath
+    path: str
     filename: str
 
     class Config:

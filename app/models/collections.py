@@ -12,5 +12,3 @@ class Collection(Base):
     is_private = Column(Boolean, nullable=False)
     created_at = Column(TIMESTAMP, server_default=func.now())
     updated_at = Column(TIMESTAMP, server_default=func.now())
-
-                
