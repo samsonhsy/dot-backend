@@ -2,6 +2,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import func
 from sqlalchemy.ext.asyncio import AsyncSession
+from datetime import datetime, timezone
+
 
 from app.db.database import get_db
 from app.schemas.users import UserCreate, UserOutput
@@ -57,7 +59,7 @@ async def activate_license_key(
     if user.account_tier == "pro":
         raise HTTPException(status_code=400, detail="Account already upgraded to pro tier")
     
-    key_in_db = get_license_key_by_string(db, license_data.key_string)
+    key_in_db = await get_license_key_by_string(db, license_data.key_string)
 
     if not key_in_db or key_in_db.is_used:
         raise HTTPException(status_code=400, detail="Invalid or already used license key")
@@ -66,7 +68,11 @@ async def activate_license_key(
     user.account_tier = "pro"
     key_in_db.is_used = True
     key_in_db.activated_by_user_id = user.id
-    key_in_db.activated_at = func.now()
+    key_in_db.activated_at = datetime.now(timezone.utc)
     
-    db.commit()
+    # Commit and refresh both objects
+    await db.commit()
+    await db.refresh(user)
+    await db.refresh(key_in_db)
+    
     return {"detail": "License key activated successfully, account upgraded to pro tier"}
