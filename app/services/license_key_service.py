@@ -26,7 +26,7 @@ async def create_keys(db: AsyncSession, num_keys: int) -> list[str]:
 
     for _ in range(num_keys):
         key_str = generate_key_string()
-        keys.append({"key_string": key_str})
+        keys.append(key_str)  # Append plain string
 
         db_obj = LicenseKey(key_string=key_str)
         db.add(db_obj)
@@ -56,4 +56,4 @@ async def refresh_retrieval_period(db: AsyncSession, user):
         await db.commit()
         await db.refresh(user)
     return
-
+    

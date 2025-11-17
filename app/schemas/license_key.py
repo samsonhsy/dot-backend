@@ -1,5 +1,12 @@
 # app/schemas/license_key.py
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 class LicenseKeyActivate(BaseModel):
     key_string: str
+
+class KeyGenerationResponse(BaseModel):
+    generated_keys: list[str]
+
+class KeyGenerationRequest(BaseModel):
+    # at least 1 key, max 100 at a time.
+    quantity: int = Field(..., gt=0, le=100)
