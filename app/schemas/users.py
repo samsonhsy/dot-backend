@@ -10,5 +10,6 @@ class UserOutput(BaseModel):
     username: str
     email: EmailStr
     id: int
+    account_tier: str
     class Config: 
         from_attributes = True # SQLAlchemy(DB) to Pydantic(API)
