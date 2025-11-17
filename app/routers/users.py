@@ -1,12 +1,14 @@
 # app/routers/users.py
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.database import get_db
 from app.schemas.users import UserCreate, UserOutput
-from app.schemas.token import Token
 from app.services import user_service
-from app.services.auth_service import get_current_user, oauth2_scheme
+from app.services.auth_service import get_current_user
+from app.schemas.license_key import LicenseKeyActivate
+from app.services.license_key_service import get_license_key_by_string
 
 router = APIRouter()
 
@@ -45,3 +47,26 @@ async def register(user: UserCreate, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Username already exists")
     
     return await user_service.create_user(db=db, user=user)
+
+@router.post("/me/license-activate", status_code=status.HTTP_200_OK)
+async def activate_license_key(
+    license_data: LicenseKeyActivate,
+    db: AsyncSession = Depends(get_db),
+    user = Depends(get_current_user)
+):
+    if user.account_tier == "pro":
+        raise HTTPException(status_code=400, detail="Account already upgraded to pro tier")
+    
+    key_in_db = get_license_key_by_string(db, license_data.key_string)
+
+    if not key_in_db or key_in_db.is_used:
+        raise HTTPException(status_code=400, detail="Invalid or already used license key")
+    
+    # Activate the license key for the user
+    user.account_tier = "pro"
+    key_in_db.is_used = True
+    key_in_db.activated_by_user_id = user.id
+    key_in_db.activated_at = func.now()
+    
+    db.commit()
+    return {"detail": "License key activated successfully, account upgraded to pro tier"}
