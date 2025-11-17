@@ -1,9 +1,13 @@
 # app/services/license_key_service.py
+from datetime import date, timedelta
 import secrets
 import string
+from fastapi import Depends
 from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from app.core.settings import settings
 from app.models.license_keys import LicenseKey
+from app.services.auth_service import get_current_user
 
 # Return a license key like AAAA-BBBB-CCCC-DDDD.
 def generate_key_string() -> str:
@@ -36,8 +40,20 @@ async def create_keys(db: AsyncSession, num_keys: int) -> list[str]:
 
     return keys
 
+# Get license key from db
 async def get_license_key_by_string(db: AsyncSession, key_string: str) -> LicenseKey:
     result = await db.execute(
         select(LicenseKey).filter(LicenseKey.key_string == key_string)
     )
     return result.scalars().first()
+
+# Refresh retrieval period
+async def refresh_retrieval_period(db: AsyncSession, user):
+    period_end_date = user.retrieval_period_start_date + timedelta(days=settings.RETRIEVAL_PERIOD_DAYS)
+    if date.today() > period_end_date:
+        user.monthly_retrieval_count = 0
+        user.retrieval_period_start_date = date.today()
+        await db.commit()
+        await db.refresh(user)
+    return
+
