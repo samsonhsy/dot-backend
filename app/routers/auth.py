@@ -12,10 +12,11 @@ from app.services.auth_service import authenticate_user
 
 router = APIRouter()
 
-@router.post("/token", response_model=Token)
+@router.post("/token", response_model=Token, status_code=status.HTTP_200_OK)
 async def login_for_access_token(
     form_data: Annotated[OAuth2PasswordRequestForm,Depends()], db: AsyncSession = Depends(get_db)
 ):
+    '''Authenticate user and return access token'''
     user = await authenticate_user(form_data.username, form_data.password, db)
     if not user:
         raise HTTPException(
@@ -26,7 +27,7 @@ async def login_for_access_token(
 
     access_token = create_access_token(
         data={"sub": user.email},
-        expires_delta=timedelta(minutes=24*60)        
+        expires_delta=timedelta(minutes=24*60*14) # 14 days 
         )
 
     return {"access_token": access_token, "token_type": "bearer"}

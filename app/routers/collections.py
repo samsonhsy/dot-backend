@@ -4,19 +4,21 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Response, UploadFile, status, File, Form
 from pydantic import ValidationError
 
-import aioboto3
 from aiobotocore.session import ClientCreatorContext as S3Client
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.settings import settings
 from app.db.database import get_db
 from app.s3.s3_bucket import get_s3_client
 
-from app.schemas.collections import CollectionCreate, CollectionContentRead, CollectionContentDelete, CollectionContentAdd, CollectionOutput
+from app.schemas.collections import CollectionCreate, CollectionContentRead, CollectionContentAdd, CollectionOutput
 from app.schemas.dotfiles import DotfileOutput
 from app.services import collection_service
 from app.services.auth_service import get_current_user
+from app.services.license_key_service import refresh_retrieval_period
 
 router = APIRouter()
+FREE_TIER_RETRIEVAL_LIMIT = settings.FREE_TIER_RETRIEVAL_LIMIT
 
 @router.get("/owned", response_model=list[CollectionOutput])
 async def get_my_collections(db: AsyncSession = Depends(get_db), user = Depends(get_current_user)):
@@ -125,7 +127,25 @@ async def get_collection_content(collection_id:int, db: AsyncSession = Depends(g
     if not user_has_access:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to access this collection")
 
+    if user.account_tier == "free":
+        await refresh_retrieval_period(db, user)
+
+        # Check if user has reached or exceeded the limit
+        if user.monthly_retrieval_count >= FREE_TIER_RETRIEVAL_LIMIT:
+            raise HTTPException(
+                status_code=429, # "Too Many Requests" is the correct HTTP status code
+                detail=f"You have exceeded your monthly limit of {FREE_TIER_RETRIEVAL_LIMIT} retrievals. Please upgrade to a Pro account for unlimited access."
+            )
+
+    # Generate the zip archive
     zipfile = await collection_service.get_dotfiles_from_collection(db, s3, collection)
+    
+    # Increment user's monthly retrieval count (only for free tier)
+    if user.account_tier == "free":
+        user.monthly_retrieval_count += 1
+        await db.commit()
+        # Refresh the user to avoid detached instance issues
+        await db.refresh(user)
 
     headers = {"Content-Disposition": "attachment; filename=files.zip"}
     media_type = "application/zip"

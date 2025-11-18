@@ -2,7 +2,6 @@
 from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 
-import aioboto3
 from aiobotocore.session import ClientCreatorContext as S3Client
 from aiobotocore.response import StreamingBody
 

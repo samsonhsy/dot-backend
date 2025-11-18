@@ -3,8 +3,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 
 from app.db.database import get_db
-from app.routers import auth, users, collections
+from app.routers import admin, auth, users, collections
 from app.s3.s3_bucket import check_storage_health
+from app.services.auth_service import get_current_admin_user
 
 app = FastAPI(title="Punkt-Backend API")
 
@@ -39,4 +40,5 @@ async def read_root():
 
 app.include_router(auth.router, prefix="/auth", tags=["Authentication"])
 app.include_router(users.router, prefix="/users", tags=["Users"])
+app.include_router(admin.router, prefix="/admin", tags=["Admin"], dependencies=[Depends(get_current_admin_user)])
 app.include_router(collections.router, prefix="/collections", tags=["Collections"])
