@@ -60,6 +60,9 @@ async def mock_client(db_session):
         finally:
             await db_session.close()
 
+    # reset dependency overrides
+    app.dependency_overrides = {}
+    
     app.dependency_overrides[get_db] = get_override_db
   
     with TestClient(app) as mock_client:
@@ -76,6 +79,9 @@ async def mock_client_with_admin_tier(db_session):
     async def get_override_admin_user():
         return User(username="admin", email="admin@email.com", hashed_pwd="admin_password", account_tier="admin")
 
+    # reset dependency overrides
+    app.dependency_overrides = {}
+    
     app.dependency_overrides[get_db] = get_override_db
 
     # remove admin tier check
@@ -90,4 +96,10 @@ def user_create_payload():
         "username":"mock_user",
         "email": "mock_email@email.com",
         "password": "mock_password"
+    }
+
+@pytest.fixture()
+def key_generation_request():
+    return {
+        "quantity": 4
     }
