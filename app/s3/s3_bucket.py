@@ -1,7 +1,6 @@
 # app/s3/s3_bucket.py
 from collections.abc import AsyncGenerator
 
-import aioboto3 # needed for aibotocore.session
 import aiobotocore
 from aiobotocore.client import AioBaseClient
 from app.core.settings import settings

@@ -7,7 +7,6 @@ from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.settings import settings
 from app.models.license_keys import LicenseKey
-from app.services.auth_service import get_current_user
 
 # Return a license key like AAAA-BBBB-CCCC-DDDD.
 def generate_key_string() -> str:

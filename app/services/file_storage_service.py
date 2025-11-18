@@ -1,5 +1,4 @@
 # app/services/file_storage_service.py
-import aioboto3
 from aiobotocore.session import ClientCreatorContext as S3Client
 from fastapi import UploadFile, HTTPException
 import botocore

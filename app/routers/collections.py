@@ -4,7 +4,6 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Response, UploadFile, status, File, Form
 from pydantic import ValidationError
 
-import aioboto3
 from aiobotocore.session import ClientCreatorContext as S3Client
 from sqlalchemy.ext.asyncio import AsyncSession
 
