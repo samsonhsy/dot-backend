@@ -13,7 +13,7 @@ async def get_users(db: AsyncSession) -> Optional[list[User]]:
 
 async def get_user_by_id(db: AsyncSession, user_id: int) -> Optional[User]:
     result = await db.execute(select(User).filter(User.id == user_id))
-    return result.scalars().all()
+    return result.scalars().first()
 
 async def get_user_by_email(db: AsyncSession, email: str) -> Optional[User]:
     result = await db.execute(select(User).filter(User.email == email))
