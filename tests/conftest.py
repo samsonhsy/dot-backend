@@ -11,6 +11,9 @@ from sqlalchemy.pool import StaticPool
 from app.db.database import Base, get_db
 from main import app
 
+from app.services.auth_service import get_current_admin_user
+from app.models.users import User
+
 # in-memory temporary database for testing
 MOCK_DATABASE_URL = "sqlite+aiosqlite:///"
 
@@ -54,7 +57,26 @@ async def mock_client(db_session):
             await db_session.close()
 
     app.dependency_overrides[get_db] = get_override_db
-    
+  
+    with TestClient(app) as mock_client:
+        yield mock_client
+
+@pytest_asyncio.fixture(scope="function")
+async def mock_client_with_admin_tier(db_session):
+    async def get_override_db():
+        try:
+            yield db_session
+        finally:
+            await db_session.close()
+
+    async def get_override_admin_user():
+        return User(username="admin", email="admin@email.com", hashed_pwd="admin_password", account_tier="admin")
+
+    app.dependency_overrides[get_db] = get_override_db
+
+    # remove admin tier check
+    app.dependency_overrides[get_current_admin_user] = get_override_admin_user
+  
     with TestClient(app) as mock_client:
         yield mock_client
 
@@ -72,4 +94,3 @@ def user_login_payload():
         "username":"mock_email@email.com",
         "password": "mock_password",
     }
-         
