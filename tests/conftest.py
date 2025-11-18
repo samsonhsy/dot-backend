@@ -3,6 +3,10 @@ import pytest
 import pytest_asyncio
 import asyncio
 
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), 'helpers'))
+
 from fastapi.testclient import TestClient
 
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
@@ -86,11 +90,4 @@ def user_create_payload():
         "username":"mock_user",
         "email": "mock_email@email.com",
         "password": "mock_password"
-    }
-
-@pytest.fixture()
-def user_login_payload():
-    return {
-        "username":"mock_email@email.com",
-        "password": "mock_password",
     }
