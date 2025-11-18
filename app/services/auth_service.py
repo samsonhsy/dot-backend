@@ -44,3 +44,13 @@ async def get_current_user(
     if user is None:
         raise credentials_exception
     return user
+
+async def get_current_admin_user(db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)) -> User:
+    if user.account_tier != "admin":
+        # print("User is not admin:", user.account_tier)
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Insufficient privileges",
+        )
+    # print("User is admin:", user.email)
+    return user
