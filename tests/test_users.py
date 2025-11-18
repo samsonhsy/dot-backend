@@ -140,7 +140,7 @@ def test_valid_user_delete(mock_client, user_create_payload):
     user_delete_response = mock_client.delete(USERS_PREFIX + f"/{user_id}")
 
     user_delete_status_code = user_delete_response.status_code
-    assert user_delete_status_code == 200
+    assert user_delete_status_code == 204
 
     # check if user is still registered
     get_user_list_response = mock_client.get(USERS_PREFIX + "/")
