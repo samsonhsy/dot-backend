@@ -4,6 +4,12 @@ from pydantic import BaseModel, Field
 class LicenseKeyActivate(BaseModel):
     key_string: str
 
+class LicenseKeyOutput(BaseModel):
+    id: int
+    key_string: str
+    is_active: bool
+    assigned_to_user_id: int | None
+
 class KeyGenerationResponse(BaseModel):
     generated_keys: list[str]
 

@@ -56,6 +56,9 @@ async def activate_license_key(
     db: AsyncSession = Depends(get_db),
     user = Depends(get_current_user)
 ):
+    if user.account_tier == "admin":
+        raise HTTPException(status_code=400, detail="Admin accounts don't need upgrade")
+
     if user.account_tier == "pro":
         raise HTTPException(status_code=400, detail="Account already upgraded to pro tier")
     
@@ -65,14 +68,24 @@ async def activate_license_key(
         raise HTTPException(status_code=400, detail="Invalid or already used license key")
     
     # Activate the license key for the user
-    user.account_tier = "pro"
+    db_user = await user_service.get_user_by_id(db=db, user_id=user.id)
+    if not db_user:
+        # Unexpected: the authenticated user should exist in the DB, but handle safely
+        raise HTTPException(status_code=500, detail="Authenticated user not found in database")
+
+    db_user.account_tier = "pro"
     key_in_db.is_used = True
-    key_in_db.activated_by_user_id = user.id
+    key_in_db.activated_by_user_id = db_user.id
     key_in_db.activated_at = datetime.now(timezone.utc)
-    
-    # Commit and refresh both objects
-    await db.commit()
-    await db.refresh(user)
+
+    # Commit and refresh the DB-attached instances
+    try:
+        await db.commit()
+    except Exception as exc:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to activate license key: {exc}") from exc
+
+    await db.refresh(db_user)
     await db.refresh(key_in_db)
-    
+
     return {"detail": "License key activated successfully, account upgraded to pro tier"}

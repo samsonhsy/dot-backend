@@ -1,9 +1,11 @@
 # app/services/auth_service.py
+import asyncio
 from typing import Annotated
+
+import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
-import jwt
 
 
 from app.core.settings import settings
@@ -19,7 +21,7 @@ async def authenticate_user(email: str, pwd: str, db: AsyncSession) -> User | No
     user = await get_user_by_email(db, email)
     if not user:
         return None
-    if not verify_pwd(pwd, user.hashed_pwd):
+    if not await asyncio.to_thread(verify_pwd, pwd, user.hashed_pwd):
         return None
     return user
 

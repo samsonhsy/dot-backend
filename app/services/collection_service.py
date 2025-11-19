@@ -35,10 +35,16 @@ async def get_access_to_collection_for_user(db: AsyncSession, collection_id: int
 
     return user_is_owner
 
+
 # retrieves a collection by its id
 async def get_collection_by_id(db: AsyncSession, collection_id: int) -> Optional[Collection]:
     result = await db.execute(select(Collection).filter(Collection.id == collection_id))
     return result.scalars().first()
+
+# retrieves all public collections
+async def get_public_collections(db: AsyncSession) -> Optional[list[Collection]]:
+    result = await db.execute(select(Collection).filter(Collection.is_private == False))
+    return result.scalars().all()
 
 # retrieves all collections owned by a user
 async def get_collections_by_user_id(db: AsyncSession, user_id: int) -> Optional[list[Collection]]:

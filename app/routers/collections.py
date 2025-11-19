@@ -20,6 +20,11 @@ from app.services.license_key_service import refresh_retrieval_period
 router = APIRouter()
 FREE_TIER_RETRIEVAL_LIMIT = settings.FREE_TIER_RETRIEVAL_LIMIT
 
+@router.get("/public", response_model=list[CollectionOutput])
+async def get_public_collections(db: AsyncSession = Depends(get_db)):
+    '''Retrieves all public collections'''
+    return await collection_service.get_public_collections(db)
+
 @router.get("/owned", response_model=list[CollectionOutput])
 async def get_my_collections(db: AsyncSession = Depends(get_db), user = Depends(get_current_user)):
     '''Retrieves all collections owned by the current user'''
