@@ -4,11 +4,21 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.database import get_db
 from app.schemas.users import UserPromote
-from app.services.license_key_service import create_keys
+from app.services.license_key_service import create_keys, get_all_license_key, get_license_key_by_id
 from app.schemas.license_key import KeyGenerationRequest, KeyGenerationResponse
 from app.services.user_service import get_user_by_id
+from app.schemas.license_key import LicenseKeyOutput
 
 router = APIRouter()
+
+@router.get("/license", response_model=list[LicenseKeyOutput], status_code=status.HTTP_200_OK)
+async def list_license_keys(db: AsyncSession = Depends(get_db)):
+    """
+    Retrieve all license keys.
+    """
+    db_license_keys = await get_all_license_key(db)
+
+    return db_license_keys
 
 @router.post("/license", response_model=KeyGenerationResponse, status_code=status.HTTP_201_CREATED)
 async def create_license_keys(request: KeyGenerationRequest, db: AsyncSession = Depends(get_db)):
@@ -18,6 +28,19 @@ async def create_license_keys(request: KeyGenerationRequest, db: AsyncSession = 
     generated_keys = await create_keys(db, request.quantity)
     
     return KeyGenerationResponse(generated_keys=generated_keys)
+
+@router.delete("/license/{key_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_license_key(key_id: int, db: AsyncSession = Depends(get_db)):
+    """
+    Delete a license key by its ID.
+    """
+    license_key_exist = await get_license_key_by_id(db, key_id)
+    if not license_key_exist:
+        raise HTTPException(status_code=404, detail="License key not found")
+    
+    await db.delete(license_key_exist)
+    await db.commit()
+    return
 
 @router.post("/promote-user", status_code=status.HTTP_200_OK)
 async def promote_user(

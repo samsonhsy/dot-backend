@@ -2,11 +2,13 @@
 from datetime import date, timedelta
 import secrets
 import string
+from typing import Optional
 from fastapi import Depends
 from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.settings import settings
 from app.models.license_keys import LicenseKey
+from app.schemas.license_key import LicenseKeyOutput
 
 # Return a license key like AAAA-BBBB-CCCC-DDDD.
 def generate_key_string() -> str:
@@ -39,12 +41,33 @@ async def create_keys(db: AsyncSession, num_keys: int) -> list[str]:
 
     return keys
 
-# Get license key from db
-async def get_license_key_by_string(db: AsyncSession, key_string: str) -> LicenseKey:
+# Get license key from db by string
+async def get_license_key_by_string(db: AsyncSession, key_string: str) -> Optional[LicenseKey]:
     result = await db.execute(
         select(LicenseKey).filter(LicenseKey.key_string == key_string)
     )
     return result.scalars().first()
+
+# Get license key from db by id
+async def get_license_key_by_id(db: AsyncSession, key_id: str) -> Optional[LicenseKey]:
+    result = await db.execute(
+        select(LicenseKey).filter(LicenseKey.id == key_id)
+    )
+    return result.scalars().first()
+
+async def get_all_license_key(db: AsyncSession) -> list[LicenseKeyOutput]:
+    result = await db.execute(select(LicenseKey))
+    license_keys = result.scalars().all()
+
+    return [
+        LicenseKeyOutput(
+            id=license_key.id,
+            key_string=license_key.key_string,
+            is_active=not license_key.is_used,
+            assigned_to_user_id=license_key.activated_by_user_id,
+        )
+        for license_key in license_keys
+    ]
 
 # Refresh retrieval period
 async def refresh_retrieval_period(db: AsyncSession, user):
