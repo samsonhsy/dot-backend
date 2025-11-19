@@ -38,9 +38,11 @@ async def create_user(db: AsyncSession, user: UserCreate) -> User:
 async def delete_user(db: AsyncSession, user_id: int):
     db_user = (await db.execute(select(User).filter(User.id == user_id))).scalars().first()
     if db_user:
-        db_license_keys = await db.execute(select(LicenseKey).filter(User.id == user_id)).scalars().first()
-        if db_license_keys:
-            db_license_keys.activated_by_user_id = None
+        license_keys_result = await db.execute(
+            select(LicenseKey).filter(LicenseKey.activated_by_user_id == user_id)
+        )
+        for license_key in license_keys_result.scalars().all():
+            license_key.activated_by_user_id = None
         await db.delete(db_user)
         await db.commit()
     return
