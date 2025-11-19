@@ -1,9 +1,13 @@
 # app/services/user_service.py
+import asyncio
 from typing import Optional
+
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
 from app.models.users import User
+from app.models.license_keys import LicenseKey
+
 from app.schemas.users import UserCreate
 from app.core.security import get_pwd_hash
 
@@ -24,7 +28,7 @@ async def get_user_by_username(db: AsyncSession, username: str) -> Optional[User
     return result.scalars().first()
 
 async def create_user(db: AsyncSession, user: UserCreate) -> User:
-    hashed_pwd = get_pwd_hash(user.password)
+    hashed_pwd = await asyncio.to_thread(get_pwd_hash, user.password)
     db_user = User(username=user.username, email=user.email, hashed_pwd=hashed_pwd)
     db.add(db_user)
     await db.commit()
@@ -34,6 +38,9 @@ async def create_user(db: AsyncSession, user: UserCreate) -> User:
 async def delete_user(db: AsyncSession, user_id: int):
     db_user = (await db.execute(select(User).filter(User.id == user_id))).scalars().first()
     if db_user:
+        db_license_keys = await db.execute(select(LicenseKey).filter(User.id == user_id)).scalars().first()
+        if db_license_keys:
+            db_license_keys.activated_by_user_id = None
         await db.delete(db_user)
         await db.commit()
     return
