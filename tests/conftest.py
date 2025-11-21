@@ -126,3 +126,38 @@ def key_generation_request():
     return {
         "quantity": 4
     }
+
+@pytest.fixture()
+def collection_create_payload():
+    return {
+        "name": "mock_collection",
+        "description": "mock_collection_description",
+        "is_private": False
+    }
+
+@pytest.fixture
+def dotfiles_create_data():
+    return [
+        {
+            "path": "/mock_dir/",
+            "filename": ".mock0"
+        },
+        {
+            "path": "/mock_dir/",
+            "filename": ".mock1"
+        }
+    ]
+
+@pytest.fixture
+def collection_add_payload(dotfiles_create_data):
+    return {
+        "content": dotfiles_create_data
+    }
+
+@pytest.fixture()
+def mock_files():
+    headers = {"content-type": "text/plain"}
+    file_0 = UploadFile(file=io.BytesIO(".mock0".encode("utf-8")), filename=".mock0", headers=headers)
+    file_1 = UploadFile(file=io.BytesIO(".mock1".encode("utf-8")), filename=".mock1", headers=headers)
+    
+    return [("files", (file_0.filename, file_0.file)), ("files", (file_1.filename, file_1.file))]
