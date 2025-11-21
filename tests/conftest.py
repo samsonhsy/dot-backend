@@ -84,34 +84,14 @@ async def mock_client(db_session, moto_patch_session):
         yield mock_client
 
 @pytest_asyncio.fixture(scope="function")
-async def mock_client_with_admin_tier(db_session, moto_patch_session):
-    async def get_override_db():
-        try:
-            yield db_session
-        finally:
-            await db_session.close()
-
-    async def get_override_s3_client():
-        session = aioboto3.Session(region_name="us-east-1")
-        async with session.client("s3", region_name="us-east-1") as s3_client:
-            await s3_client.create_bucket(Bucket=BUCKET_NAME)
-
-            yield s3_client
-
+async def mock_client_with_admin_tier(mock_client):
     async def get_override_admin_user():
         return User(username="admin", email="admin@email.com", hashed_pwd="admin_password", account_tier="admin")
-
-    # reset dependency overrides
-    app.dependency_overrides = {}
     
-    app.dependency_overrides[get_db] = get_override_db
-    app.dependency_overrides[get_s3_client] = get_override_s3_client
-
     # remove admin tier check
-    app.dependency_overrides[get_current_admin_user] = get_override_admin_user
-  
-    with TestClient(app) as mock_client:
-        yield mock_client
+    app.dependency_overrides[get_current_admin_user] = get_override_admin_user  
+
+    yield mock_client  
 
 @pytest.fixture()
 def user_create_payload():
