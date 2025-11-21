@@ -381,4 +381,126 @@ def test_valid_get_collection_file_paths(mock_client, user_create_payload, colle
     assert get_collection_file_paths_json[1]["path"] == collection_add_payload["content"][1]["path"]
     assert get_collection_file_paths_json[1]["filename"] == collection_add_payload["content"][1]["filename"]
 
+@pytest.mark.parametrize("delete_index", FILE_INDICES)
+def test_valid_delete_file_in_collection(mock_client, user_create_payload, collection_create_payload, collection_add_payload, mock_files, delete_index):
+    # create a user
+    utils.create_new_user(mock_client, user_create_payload)
+
+    # get a jwt token for authentication
+    user_login_payload = utils.get_user_login_payload(user_create_payload)
+    access_token = utils.get_user_access_token(mock_client, user_login_payload)
+    
+    authorization_headers = utils.get_authorization_headers(access_token)
+
+    # create a collection
+    collection_create_json = utils.create_new_collection(mock_client, collection_create_payload, authorization_headers)
+    collection_id = collection_create_json["id"]
+
+    # add mock files to collection
+    utils.add_to_collection(mock_client, collection_id, collection_add_payload, mock_files, authorization_headers)
+
+    # check files in collection in s3 bucket
+    get_collection_content_0 = utils.get_collection_content(mock_client, collection_id, authorization_headers)
+    assert len(get_collection_content_0) == len(mock_files)
+
+    mock_filenames_0, mock_file_contents_0 = utils.seperate_mock_files(mock_files)
+    modified_mock_filenames_0 = [generate_dotfile_name_in_collection(collection_id, mock_filename) for mock_filename in mock_filenames_0]
+    
+    collection_content_filenames_0, collection_content_file_contents_0 = utils.seperate_collection_content(get_collection_content_0)
+
+    assert modified_mock_filenames_0 == collection_content_filenames_0
+    assert mock_file_contents_0 == collection_content_file_contents_0
+
+    # check file paths in collection in database
+    get_collection_file_paths_0 = utils.get_collection_file_paths(mock_client, collection_id, authorization_headers)
+    assert get_collection_file_paths_0 == collection_add_payload["content"]
+
+    # delete file in collection
+    filename = mock_files[delete_index][1][0]
+
+    del mock_files[delete_index]
+    del collection_add_payload["content"][delete_index]
+
+    delete_file_in_collection_response = mock_client.delete(COLLECTIONS_PREFIX + f"/{collection_id}/dotfiles/{filename}", headers=authorization_headers)
+    
+    delete_file_in_collection_status_code = delete_file_in_collection_response.status_code
+    assert delete_file_in_collection_status_code == 204
+
+    # check if file in collection is deleted from s3 bucket
+    get_collection_content_1 = utils.get_collection_content(mock_client, collection_id, authorization_headers)
+    assert len(get_collection_content_1) == len(mock_files)
+
+    mock_filenames_1, mock_file_contents_1 = utils.seperate_mock_files(mock_files)
+    modified_mock_filenames_1 = [generate_dotfile_name_in_collection(collection_id, mock_filename) for mock_filename in mock_filenames_1]
+    
+    collection_content_filenames_1, collection_content_file_contents_1 = utils.seperate_collection_content(get_collection_content_1)
+
+    assert modified_mock_filenames_1 == collection_content_filenames_1
+    assert mock_file_contents_1 == collection_content_file_contents_1
+
+    # check if file paths in collection is deleted from database
+    get_collection_file_paths_1 = utils.get_collection_file_paths(mock_client, collection_id, authorization_headers)
+    assert get_collection_file_paths_1 == collection_add_payload["content"]
+
+def test_delete_unknown_file_in_collection(mock_client, user_create_payload, collection_create_payload, collection_add_payload, mock_files):
+    # create a user
+    utils.create_new_user(mock_client, user_create_payload)
+
+    # get a jwt token for authentication
+    user_login_payload = utils.get_user_login_payload(user_create_payload)
+    access_token = utils.get_user_access_token(mock_client, user_login_payload)
+    
+    authorization_headers = utils.get_authorization_headers(access_token)
+
+    # create a collection
+    collection_create_json = utils.create_new_collection(mock_client, collection_create_payload, authorization_headers)
+    collection_id = collection_create_json["id"]
+
+    # add mock files to collection
+    utils.add_to_collection(mock_client, collection_id, collection_add_payload, mock_files, authorization_headers)
+
+    # attempt to delete unknown file in collection
+    filename = "unknown_mock_filename"
+
+    delete_file_in_collection_response = mock_client.delete(COLLECTIONS_PREFIX + f"/{collection_id}/dotfiles/{filename}", headers=authorization_headers)
+    
+    delete_file_in_collection_status_code = delete_file_in_collection_response.status_code
+    assert delete_file_in_collection_status_code == 404
+
+    delete_file_collection_json = delete_file_in_collection_response.json()
+    assert delete_file_collection_json["detail"] == f"File {filename} not found"
+
+def test_valid_delete_collection(mock_client, user_create_payload, collection_create_payload, collection_add_payload, mock_files):
+    # create a user
+    utils.create_new_user(mock_client, user_create_payload)
+
+    # get a jwt token for authentication
+    user_login_payload = utils.get_user_login_payload(user_create_payload)
+    access_token = utils.get_user_access_token(mock_client, user_login_payload)
+    
+    authorization_headers = utils.get_authorization_headers(access_token)
+
+    # create a collection
+    collection_create_json = utils.create_new_collection(mock_client, collection_create_payload, authorization_headers)
+    collection_id = collection_create_json["id"]
+
+    # check if collection has been added
+    get_collection_list_json_0 = utils.get_collection_list_of_user(mock_client, authorization_headers)
+    
+    assert len(get_collection_list_json_0) == 1
+
+    # add mock files to collection
+    collection_add_json = utils.add_to_collection(mock_client, collection_id, collection_add_payload, mock_files, authorization_headers)
+
+    # delete collection
+    collection_delete_response = mock_client.delete(COLLECTIONS_PREFIX + f"/{collection_id}", headers=authorization_headers)
+
+    collection_delete_status_code = collection_delete_response.status_code
+    assert collection_delete_status_code == 204
+
+    # check if collection has been deleted
+    get_collection_list_json_1 = utils.get_collection_list_of_user(mock_client, authorization_headers)
+    
+    assert len(get_collection_list_json_1) == 0
+
 
