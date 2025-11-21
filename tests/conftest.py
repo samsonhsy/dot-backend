@@ -3,16 +3,23 @@ import pytest
 import pytest_asyncio
 import asyncio
 
+import io
 import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__), 'helpers'))
 
 from fastapi.testclient import TestClient
+from fastapi import UploadFile
 
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.db.database import Base, get_db
+from app.s3.s3_bucket import get_s3_client, BUCKET_NAME
+
+import aioboto3
+from types_aiobotocore_s3 import S3Client
+
 from main import app
 
 from app.services.auth_service import get_current_admin_user
@@ -53,28 +60,43 @@ async def db_session():
     await connection.close()
 
 @pytest_asyncio.fixture(scope="function")
-async def mock_client(db_session):
+async def mock_client(db_session, moto_patch_session):
     async def get_override_db():
         try:
             yield db_session
         finally:
             await db_session.close()
+        
+    async def get_override_s3_client():
+        session = aioboto3.Session(region_name="us-east-1")
+        async with session.client("s3", region_name="us-east-1") as s3_client:
+            await s3_client.create_bucket(Bucket=BUCKET_NAME)
+
+            yield s3_client
 
     # reset dependency overrides
     app.dependency_overrides = {}
     
     app.dependency_overrides[get_db] = get_override_db
+    app.dependency_overrides[get_s3_client] = get_override_s3_client
   
     with TestClient(app) as mock_client:
         yield mock_client
 
 @pytest_asyncio.fixture(scope="function")
-async def mock_client_with_admin_tier(db_session):
+async def mock_client_with_admin_tier(db_session, moto_patch_session):
     async def get_override_db():
         try:
             yield db_session
         finally:
             await db_session.close()
+
+    async def get_override_s3_client():
+        session = aioboto3.Session(region_name="us-east-1")
+        async with session.client("s3", region_name="us-east-1") as s3_client:
+            await s3_client.create_bucket(Bucket=BUCKET_NAME)
+
+            yield s3_client
 
     async def get_override_admin_user():
         return User(username="admin", email="admin@email.com", hashed_pwd="admin_password", account_tier="admin")
@@ -83,6 +105,7 @@ async def mock_client_with_admin_tier(db_session):
     app.dependency_overrides = {}
     
     app.dependency_overrides[get_db] = get_override_db
+    app.dependency_overrides[get_s3_client] = get_override_s3_client
 
     # remove admin tier check
     app.dependency_overrides[get_current_admin_user] = get_override_admin_user
