@@ -4,6 +4,7 @@ import pytest_asyncio
 import asyncio
 
 import io
+
 import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__), 'helpers'))
@@ -17,8 +18,9 @@ from sqlalchemy.pool import StaticPool
 from app.db.database import Base, get_db
 from app.s3.s3_bucket import get_s3_client, BUCKET_NAME
 
+from moto.server import ThreadedMotoServer
 import aioboto3
-from types_aiobotocore_s3 import S3Client
+from aiobotocore.config import AioConfig
 
 from main import app
 
@@ -59,8 +61,41 @@ async def db_session():
     await transaction.rollback()
     await connection.close()
 
+
+@pytest.fixture(scope="session")
+def moto_server():
+    ip_address = "localhost"
+    port = 5000
+    url = f"http://{ip_address}:{port}"
+
+    server = ThreadedMotoServer(ip_address=ip_address, port=port)
+    server.start()
+
+    yield url
+
+    server.stop()
+
+@pytest.fixture()
+def moto_aio_config():
+    return AioConfig(
+        signature_version="v4", 
+        read_timeout=5, 
+        connect_timeout=5)
+
 @pytest_asyncio.fixture(scope="function")
-async def mock_client(db_session, moto_patch_session):
+async def s3_client(moto_server, moto_aio_config):
+    session = aioboto3.Session(
+        region_name="us-east-1", 
+        aws_secret_access_key="xxx", 
+        aws_access_key_id="xxx")
+
+    async with session.client("s3", region_name="us-east-1", endpoint_url=moto_server, config=moto_aio_config) as client:
+        await client.create_bucket(Bucket=BUCKET_NAME)
+
+        return client
+
+@pytest_asyncio.fixture(scope="function")
+async def mock_client(db_session, s3_client):
     async def get_override_db():
         try:
             yield db_session
@@ -68,11 +103,7 @@ async def mock_client(db_session, moto_patch_session):
             await db_session.close()
         
     async def get_override_s3_client():
-        session = aioboto3.Session(region_name="us-east-1")
-        async with session.client("s3", region_name="us-east-1") as s3_client:
-            await s3_client.create_bucket(Bucket=BUCKET_NAME)
-
-            yield s3_client
+        yield s3_client
 
     # reset dependency overrides
     app.dependency_overrides = {}
