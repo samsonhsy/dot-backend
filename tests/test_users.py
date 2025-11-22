@@ -1,4 +1,5 @@
 # tests/test_users.py
+import pytest
 import utils
 
 USERS_PREFIX = "/users"
@@ -280,7 +281,10 @@ def test_activate_used_license_key(mock_client_with_admin_tier, user_create_payl
     second_user_info_json = utils.get_user_list(mock_client)[1]
     assert second_user_info_json["account_tier"] == "free"
 
-def test_activate_license_key_for_pro_user(mock_client_with_admin_tier, user_create_payload):
+@pytest.mark.parametrize("user_tier, expected_message", [
+    ("pro", "Account already upgraded to pro tier"),
+    ("admin", "Admin accounts don't need upgrade")])
+def test_activate_license_key_for_nonfree_user(mock_client_with_admin_tier, user_create_payload, user_tier, expected_message):
     # rename for convenience
     mock_client = mock_client_with_admin_tier
     
@@ -301,7 +305,7 @@ def test_activate_license_key_for_pro_user(mock_client_with_admin_tier, user_cre
     authorization_headers = utils.get_authorization_headers(access_token)
 
     # promote user to pro
-    utils.promote_user(mock_client, user_id, "pro")
+    utils.promote_user(mock_client, user_id, user_tier)
 
     # activate license key for user
     activate_license_response = mock_client.post(USERS_PREFIX + "/me/license-activate", json=license_key_payload, headers=authorization_headers)
@@ -310,5 +314,5 @@ def test_activate_license_key_for_pro_user(mock_client_with_admin_tier, user_cre
     assert activate_license_status_code == 400
 
     activate_license_json = activate_license_response.json()
-    assert activate_license_json["detail"] == "Account already upgraded to pro tier"
+    assert activate_license_json["detail"] == expected_message
 
