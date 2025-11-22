@@ -74,6 +74,9 @@ def test_invalid_password_login(mock_client, user_create_payload):
     """
     Verifies that the api rejects attempts to login with an incorrect password
     """
+    # create a user
+    utils.create_new_user(mock_client, user_create_payload)
+
     # login for jwt token with invalid password
     user_login_payload = utils.get_user_login_payload(user_create_payload)
 
