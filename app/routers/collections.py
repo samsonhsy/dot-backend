@@ -13,7 +13,7 @@ from app.s3.s3_bucket import get_s3_client
 
 from app.schemas.collections import CollectionCreate, CollectionContentRead, CollectionContentAdd, CollectionOutput
 from app.schemas.dotfiles import DotfileOutput
-from app.services import collection_service
+from app.services import collection_service, dotfile_service
 from app.services.auth_service import get_current_user
 from app.services.license_key_service import refresh_retrieval_period
 
@@ -186,6 +186,11 @@ async def delete_file_in_collection(collection_id:int, filename:str, db: AsyncSe
     user_has_access = await collection_service.get_access_to_collection_for_user(db, collection_id, user.id)
     if not user_has_access:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to access this collection")
+
+    # Check if the file in the collection exists
+    file_exists = await dotfile_service.get_dotfile_by_filename_in_collection(db, collection_id, filename)
+    if not file_exists:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"File {filename} not found")
 
     await collection_service.delete_from_collection(db, s3, collection_id, filename)
 
