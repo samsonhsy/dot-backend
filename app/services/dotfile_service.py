@@ -1,6 +1,7 @@
 # app/services/dotfile_service.py
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from sqlalchemy import and_
 
 from app.models.dotfiles import Dotfile
 from app.schemas.dotfiles import DotfileCreate
@@ -12,6 +13,11 @@ def generate_dotfile_name_in_collection(collection_id: int, filename: str):
 # retrieves all dotfiles with a collection id
 async def get_dotfiles_by_collection_id(db: AsyncSession, collection_id: int) -> list[Dotfile]:
     result = await db.execute(select(Dotfile).filter(Dotfile.collection_id == collection_id))
+    return result.scalars().all()
+
+# retrieve a dotfile with a filename and collection id
+async def get_dotfile_by_filename_in_collection(db: AsyncSession, collection_id: int, filename: str) -> Dotfile:
+    result = await db.execute(select(Dotfile).filter(and_(Dotfile.collection_id == collection_id, Dotfile.filename == filename)))
     return result.scalars().all()
 
 # creates dotfile records in the dotfile table 
@@ -31,8 +37,8 @@ async def create_dotfiles_in_collection(db: AsyncSession, collection_id:int, dot
     return db_dotfiles
 
 # deletes a dotfile record from the dotfile table
-async def delete_dotfile(db: AsyncSession, filename: str):
-    db_dotfile = (await db.execute(select(Dotfile).filter(Dotfile.filename == filename))).scalars().first()
+async def delete_dotfile(db: AsyncSession, collection_id: int, filename: str):
+    db_dotfile = (await db.execute(select(Dotfile).filter(and_(Dotfile.collection_id == collection_id, Dotfile.filename == filename)))).scalars().first()
     if db_dotfile:
         await db.delete(db_dotfile)
         await db.commit()
