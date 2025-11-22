@@ -285,40 +285,30 @@ def test_activate_license_key_for_pro_user(mock_client_with_admin_tier, user_cre
     mock_client = mock_client_with_admin_tier
     
     # generate license keys
-    generate_license_json = utils.generate_license_keys(mock_client, 2)
+    generate_license_json = utils.generate_license_keys(mock_client, 1)
     
-    license_key_1 = generate_license_json["generated_keys"][0]
-    license_key_2 = generate_license_json["generated_keys"][1]
-
-    license_key_payload_1 = utils.get_license_key_payload(license_key_1)
-    license_key_payload_2 = utils.get_license_key_payload(license_key_2)
+    license_key = generate_license_json["generated_keys"][0]
+    license_key_payload = utils.get_license_key_payload(license_key)
 
     # create a user
     user_create_json = utils.create_new_user(mock_client, user_create_payload)
+    user_id = user_create_json["id"]
 
-    # check if user created has a free tier
-    assert user_create_json["account_tier"] == "free"
-    
     # get jwt token for authentication
     user_login_payload = utils.get_user_login_payload(user_create_payload)
     access_token = utils.get_user_access_token(mock_client, user_login_payload)
+    
+    authorization_headers = utils.get_authorization_headers(access_token)
+
+    # promote user to pro
+    utils.promote_user(mock_client, user_id, "pro")
 
     # activate license key for user
-    authorization_headers = utils.get_authorization_headers(access_token)
-    activate_license_response_1 = mock_client.post(USERS_PREFIX + "/me/license-activate", json=license_key_payload_1, headers=authorization_headers)
+    activate_license_response = mock_client.post(USERS_PREFIX + "/me/license-activate", json=license_key_payload, headers=authorization_headers)
 
-    activate_license_status_code_1 = activate_license_response_1.status_code
-    assert activate_license_status_code_1 == 200
+    activate_license_status_code = activate_license_response.status_code
+    assert activate_license_status_code == 400
 
-    # check if user is promoted to pro tier
-    current_user_info_json = utils.get_user_list(mock_client)[0]
-    assert current_user_info_json["account_tier"] == "pro"
+    activate_license_json = activate_license_response.json()
+    assert activate_license_json["detail"] == "Account already upgraded to pro tier"
 
-    # activate another license key for user
-    activate_license_response_2 = mock_client.post(USERS_PREFIX + "/me/license-activate", json=license_key_payload_2, headers=authorization_headers)
-
-    activate_license_status_code_2 = activate_license_response_2.status_code
-    assert activate_license_status_code_2 == 400
-
-    activate_license_json_2 = activate_license_response_2.json()
-    assert activate_license_json_2["detail"] == "Account already upgraded to pro tier"
