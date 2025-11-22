@@ -22,19 +22,35 @@ async def get_dotfile_by_filename_in_collection(db: AsyncSession, collection_id:
 
 # creates dotfile records in the dotfile table 
 async def create_dotfiles_in_collection(db: AsyncSession, collection_id:int, dotfiles : list[DotfileCreate]) -> list[Dotfile]:
-    db_dotfiles = [] 
-    
+    if not dotfiles:
+        return []
+
+    target_paths = [dotfile.path for dotfile in dotfiles]
+    existing_result = await db.execute(
+        select(Dotfile).filter(
+            Dotfile.collection_id == collection_id,
+            Dotfile.path.in_(target_paths)
+        )
+    )
+    existing_map = {dotfile.path: dotfile for dotfile in existing_result.scalars().all()}
+
+    persisted_dotfiles: list[Dotfile] = []
+
     for dotfile in dotfiles:
-        db_dotfile = Dotfile(collection_id=collection_id, path=dotfile.path, filename=dotfile.filename)
-        db_dotfiles.append(db_dotfile)
-    db.add_all(db_dotfiles)
+        if dotfile.path in existing_map:
+            db_dotfile = existing_map[dotfile.path]
+            db_dotfile.filename = dotfile.filename
+        else:
+            db_dotfile = Dotfile(collection_id=collection_id, path=dotfile.path, filename=dotfile.filename)
+            db.add(db_dotfile)
+        persisted_dotfiles.append(db_dotfile)
 
     await db.commit()
 
-    for db_dotfile in db_dotfiles:
+    for db_dotfile in persisted_dotfiles:
         await db.refresh(db_dotfile)
 
-    return db_dotfiles
+    return persisted_dotfiles
 
 # deletes a dotfile record from the dotfile table
 async def delete_dotfile(db: AsyncSession, collection_id: int, filename: str):

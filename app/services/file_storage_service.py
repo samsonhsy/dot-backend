@@ -1,6 +1,7 @@
 # app/services/file_storage_service.py
 from aiobotocore.session import ClientCreatorContext as S3Client
 from fastapi import UploadFile, HTTPException
+import asyncio
 import botocore
 from app.s3.s3_bucket import BUCKET_NAME
 
@@ -13,8 +14,13 @@ async def upload_file_to_storage(s3 : S3Client, file : UploadFile):
     if file_contents is None:
         raise HTTPException(status_code=400, detail="Uploaded file is empty")
 
-    result = await s3.put_object(Body=file_contents, Bucket=BUCKET_NAME, Key=file.filename)
-
+    try:
+        result = await asyncio.wait_for(
+            s3.put_object(Body=file_contents, Bucket=BUCKET_NAME, Key=file.filename),
+            timeout=30.0
+        )
+    except asyncio.TimeoutError:
+        raise HTTPException(status_code=504, detail=f"Storage upload timeout for {file.filename}")
     # Reset pointer so the caller can re-read the file if needed
     await file.seek(0)
 
