@@ -6,7 +6,11 @@ USERS_PREFIX = "/users"
 AUTH_PREFIX = "/auth"
 ADMIN_PREFIX = "/admin"
 
+# user registration tests
 def test_valid_register(mock_client, user_create_payload):
+    """
+    Verifies that the api properly registers a user
+    """
     # create the user
     user_create_response = mock_client.post(USERS_PREFIX + "/register", json=user_create_payload)
     
@@ -27,6 +31,10 @@ def test_valid_register(mock_client, user_create_payload):
     assert get_user_list_response_json[0]["id"] == 1
 
 def test_duplicate_username_register(mock_client, user_create_payload):
+    """
+    Verifies that the api rejects user registration attempts that include an already existing username
+    """
+    # create a user
     utils.create_new_user(mock_client, user_create_payload)
 
     # attempt to register a user with the same username but different email
@@ -42,6 +50,9 @@ def test_duplicate_username_register(mock_client, user_create_payload):
     assert duplicate_username_register_response_json["detail"] == "Username already exists"
 
 def test_duplicate_email_register(mock_client, user_create_payload):
+    """
+    Verifies that the api rejects user registration attempts that include an already registered email
+    """
     # create a user
     utils.create_new_user(mock_client, user_create_payload)
 
@@ -58,6 +69,9 @@ def test_duplicate_email_register(mock_client, user_create_payload):
     assert duplicate_email_register_response_json["detail"] == "Email already registered"
 
 def test_invalid_email_register(mock_client, user_create_payload):
+    """
+    Verifies that the api rejects user registration attempts that include an invalid email format
+    """
     # register a user with an invalid email format
     incorrect_user_create_payload = user_create_payload.copy()
     incorrect_user_create_payload["email"] = "invalid_mock_email"
@@ -67,7 +81,11 @@ def test_invalid_email_register(mock_client, user_create_payload):
     invalid_email_register_status_code = invalid_email_register_response.status_code
     assert invalid_email_register_status_code == 422
 
+# user listing tests
 def test_user_list(mock_client, user_create_payload):
+    """
+    Verifies that the api returns a list of all registered users
+    """
     # get list of users when there are no registered users
     get_user_list_response_0 = mock_client.get(USERS_PREFIX + "/")
     
@@ -116,7 +134,11 @@ def test_user_list(mock_client, user_create_payload):
     assert second_get_user_list_json_2[1]["email"] == user_create_payload_2["email"]
     assert second_get_user_list_json_2[1]["id"] == 2
 
+# user deletion tests
 def test_valid_user_delete(mock_client, user_create_payload):
+    """
+    Verifies that the api properly deletes a user
+    """
     # create a user
     user_create_json = utils.create_new_user(mock_client, user_create_payload)
 
@@ -132,6 +154,9 @@ def test_valid_user_delete(mock_client, user_create_payload):
     assert len(get_user_list_json) == 0
 
 def test_invalid_user_delete(mock_client):
+    """
+    Verifies that the api rejects attempts to delete non-existant users
+    """
     # attempt to delete a user with non-existing user id
     invalid_user_id = 1
     user_delete_response = mock_client.delete(USERS_PREFIX + f"/{invalid_user_id}")
@@ -142,7 +167,11 @@ def test_invalid_user_delete(mock_client):
     user_delete_json = user_delete_response.json()
     assert user_delete_json["detail"] == "User not found"
 
+# user information retrival tests
 def test_get_current_user_info(mock_client, user_create_payload):
+    """
+    Verifies that the api returns the information of the user sending the request
+    """
     # create a user
     utils.create_new_user(mock_client, user_create_payload)
 
@@ -161,7 +190,11 @@ def test_get_current_user_info(mock_client, user_create_payload):
     assert current_user_info_json["username"] == user_create_payload["username"]
     assert current_user_info_json["email"] == user_create_payload["email"]
 
+# user license activation tests
 def test_activate_valid_license_key(mock_client_with_admin_tier, user_create_payload):
+    """
+    Verifies that the api can properly activate a license key for a user
+    """
     # rename for convenience
     mock_client = mock_client_with_admin_tier
     
@@ -197,6 +230,9 @@ def test_activate_valid_license_key(mock_client_with_admin_tier, user_create_pay
     assert current_user_info_json["account_tier"] == "pro"
 
 def test_activate_invalid_license_key(mock_client_with_admin_tier, user_create_payload):
+    """
+    Verifies that the api rejects attempts to activate non-existant license keys
+    """
     # rename for convenience
     mock_client = mock_client_with_admin_tier
     
@@ -231,6 +267,9 @@ def test_activate_invalid_license_key(mock_client_with_admin_tier, user_create_p
     assert current_user_info_json["account_tier"] == "free"
 
 def test_activate_used_license_key(mock_client_with_admin_tier, user_create_payload):
+    """
+    Verifies that the api rejects attempts to activate already used license keys
+    """
     # rename for convenience
     mock_client = mock_client_with_admin_tier
     
@@ -285,6 +324,9 @@ def test_activate_used_license_key(mock_client_with_admin_tier, user_create_payl
     ("pro", "Account already upgraded to pro tier"),
     ("admin", "Admin accounts don't need upgrade")])
 def test_activate_license_key_for_nonfree_user(mock_client_with_admin_tier, user_create_payload, user_tier, expected_message):
+    """
+    Verifies that the api rejects attempts to activate license keys by non-free users
+    """
     # rename for convenience
     mock_client = mock_client_with_admin_tier
     

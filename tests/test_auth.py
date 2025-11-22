@@ -4,7 +4,11 @@ import utils
 USERS_PREFIX = "/users"
 AUTH_PREFIX = "/auth"
 
+# token authentication tests
 def test_invalid_token_authentication(mock_client):
+    """
+    Verifies that the api rejects attempts to access user-specific information without authentication
+    """
     # attempt to authenticate with invalid token
     invalid_access_token = "invalid_access_token"
     authorization_headers = utils.get_authorization_headers(invalid_access_token)
@@ -17,7 +21,11 @@ def test_invalid_token_authentication(mock_client):
     current_user_info_json = current_user_info_response.json()
     assert current_user_info_json["detail"] == "Could not validate credentials"
 
+# user login tests
 def test_valid_login(mock_client, user_create_payload):
+    """
+    Verifies that the api properly returns a token for authentication after user login 
+    """
     # create a user
     utils.create_new_user(mock_client, user_create_payload)
 
@@ -45,6 +53,9 @@ def test_valid_login(mock_client, user_create_payload):
     assert current_user_info_json["email"] == user_create_payload["email"]
 
 def test_invalid_username_login(mock_client, user_create_payload):
+    """
+    Verifies that the api rejects attempts to login with non-existant username
+    """
     # login for jwt token with invalid username
     user_login_payload = utils.get_user_login_payload(user_create_payload)
 
@@ -60,6 +71,9 @@ def test_invalid_username_login(mock_client, user_create_payload):
     assert get_token_json["detail"] == "Incorrect email or password"
 
 def test_invalid_password_login(mock_client, user_create_payload):
+    """
+    Verifies that the api rejects attempts to login with an incorrect password
+    """
     # login for jwt token with invalid password
     user_login_payload = utils.get_user_login_payload(user_create_payload)
 

@@ -15,7 +15,11 @@ FILE_INDICES = [0, 1]
 
 FREE_TIER_RETRIEVAL_LIMIT = settings.FREE_TIER_RETRIEVAL_LIMIT
 
+# collection creation tests
 def test_create_collection(mock_client, user_create_payload, collection_create_payload):
+    """
+    Verifies that the api can properly create a collection
+    """
     # create a user
     utils.create_new_user(mock_client, user_create_payload)
 
@@ -36,7 +40,11 @@ def test_create_collection(mock_client, user_create_payload, collection_create_p
     assert collection_create_json["name"] == collection_create_payload["name"]
     assert collection_create_json["description"] == collection_create_payload["description"]
 
+# collection listing tests
 def test_get_my_collections(mock_client, user_create_payload, collection_create_payload):
+    """
+    Verifies that the api returns a list of collections owned by a user
+    """
     # create a user
     utils.create_new_user(mock_client, user_create_payload)
 
@@ -85,7 +93,53 @@ def test_get_my_collections(mock_client, user_create_payload, collection_create_
     assert get_collection_list_json_2[1]["name"] == collection_create_payload["name"]
     assert get_collection_list_json_2[1]["description"] == collection_create_payload["description"]
 
+def test_get_public_collections(mock_client, user_create_payload, collection_create_payload):
+    """
+    Verifies that the api returns a list of public collections
+    """
+    # create a user
+    utils.create_new_user(mock_client, user_create_payload)
+
+    # get a jwt token for authentication
+    user_login_payload = utils.get_user_login_payload(user_create_payload)
+    access_token = utils.get_user_access_token(mock_client, user_login_payload)
+    
+    authorization_headers = utils.get_authorization_headers(access_token)
+
+    # create a private collection
+    private_collection_create_payload = collection_create_payload.copy()
+    private_collection_name = "private_mock_collection"
+
+    private_collection_create_payload["name"] = private_collection_name
+    private_collection_create_payload["is_private"] = True
+ 
+    utils.create_new_collection(mock_client, private_collection_create_payload, authorization_headers)
+
+    # create a public collection
+    public_collection_create_payload = collection_create_payload.copy()
+    public_collection_name = "public_mock_collection"
+
+    public_collection_create_payload["name"] = public_collection_name
+    public_collection_create_payload["is_private"] = False
+
+    utils.create_new_collection(mock_client, public_collection_create_payload, authorization_headers)
+
+    # get a list of only public collections
+    public_collections_response = mock_client.get(COLLECTIONS_PREFIX + "/public")
+
+    public_collections_status_code = public_collections_response.status_code
+    assert public_collections_status_code == 200
+
+    public_collections_json = public_collections_response.json()
+
+    assert len(public_collections_json) == 1
+    assert public_collections_json[0]["name"] == public_collection_name
+    
+# collection content addition tests
 def test_valid_add_to_collection(mock_client, user_create_payload, collection_create_payload, collection_add_payload, mock_files):
+    """
+    Verifies that the api can properly add files to a collection
+    """
     # create a user
     utils.create_new_user(mock_client, user_create_payload)
 
@@ -118,6 +172,9 @@ def test_valid_add_to_collection(mock_client, user_create_payload, collection_cr
     assert collection_add_json[1]["filename"] == collection_add_payload["content"][1]["filename"]  
 
 def test_add_to_collection_with_mismatch_collection_id(mock_client, user_create_payload, collection_create_payload, collection_add_payload, mock_files):
+    """
+    Verifies that the api rejects attempts to add files to a collection by providing different collection ids in the api endpoint and request data
+    """
     # create a user
     utils.create_new_user(mock_client, user_create_payload)
 
@@ -146,6 +203,9 @@ def test_add_to_collection_with_mismatch_collection_id(mock_client, user_create_
     assert collection_add_json["detail"] == f"Body collection_id ({collection_add_payload["collection_id"]}) must match URL collection_id ({collection_id})"
 
 def test_add_to_collection_with_excess_file_count(mock_client, user_create_payload, collection_create_payload, collection_add_payload, mock_files):
+    """
+    Verifies that the api rejects attempts to add files to a collection by providing more files than those specified in the request data 
+    """
     # create a user
     utils.create_new_user(mock_client, user_create_payload)
 
@@ -175,6 +235,9 @@ def test_add_to_collection_with_excess_file_count(mock_client, user_create_paylo
     assert collection_add_json["detail"] == f"Number of files ({len(mock_files)}) must match number of content entries ({len(collection_add_payload["content"])})"
 
 def test_add_to_collection_with_insufficient_file_count(mock_client, user_create_payload, collection_create_payload, collection_add_payload, mock_files):
+    """
+    Verifies that the api rejects the attempt to add files to a collection by providing less files than those specified in the request data
+    """
     # create a user
     utils.create_new_user(mock_client, user_create_payload)
 
@@ -209,6 +272,9 @@ def test_add_to_collection_with_insufficient_file_count(mock_client, user_create
 
 @pytest.mark.parametrize("mismatch_index", FILE_INDICES)
 def test_add_to_collection_with_mismatch_filenames(mock_client, user_create_payload, collection_create_payload, collection_add_payload, mock_files, mismatch_index):
+    """
+    Verifies that the api rejects attempts to add files to a collection by providing files with different filenames than those specified in the request data
+    """
     # create a user
     utils.create_new_user(mock_client, user_create_payload)
 
@@ -242,7 +308,82 @@ def test_add_to_collection_with_mismatch_filenames(mock_client, user_create_payl
     collection_add_json = collection_add_response.json()
     assert collection_add_json["detail"] == f"Filename mismatch at index {mismatch_index}: uploaded file is '{file_filename}' but content specifies '{content_filename}'"
 
+def test_add_to_unknown_collection(mock_client, user_create_payload, collection_create_payload, collection_add_payload, mock_files):
+    """
+    Verifies that the api rejects attempts to add files to a non-existant collection
+    """
+    # create a user
+    utils.create_new_user(mock_client, user_create_payload)
+
+    # get a jwt token for authentication
+    user_login_payload = utils.get_user_login_payload(user_create_payload)
+    access_token = utils.get_user_access_token(mock_client, user_login_payload)
+    
+    authorization_headers = utils.get_authorization_headers(access_token)
+
+    # create an invalid collection id
+    collection_id = 1
+
+    # attempt to add mock files to unknown collection
+    collection_add_payload["collection_id"] = collection_id
+    collection_add_data = {"collection_add_payload": json.dumps(collection_add_payload)}
+
+    collection_add_response = mock_client.post(COLLECTIONS_PREFIX + f"/{collection_id}/dotfiles", data=collection_add_data, files=mock_files, headers=authorization_headers)
+
+    collection_add_status_code = collection_add_response.status_code
+    assert collection_add_status_code == 404
+    
+    collection_add_json = collection_add_response.json()
+    assert collection_add_json["detail"] == f"Collection {collection_id} not found"
+
+def test_add_to_collection_without_access_permission(mock_client, user_create_payload, collection_create_payload, collection_add_payload, mock_files):
+    """
+    Verifies that the api rejects attempts to add files to a collection that the user does not have access to 
+    """
+    # create the first user
+    utils.create_new_user(mock_client, user_create_payload)
+
+    # get a jwt token for authentication for the first user
+    user_login_payload_0 = utils.get_user_login_payload(user_create_payload)
+    access_token_0 = utils.get_user_access_token(mock_client, user_login_payload_0)
+    
+    authorization_headers_0 = utils.get_authorization_headers(access_token_0)
+
+    # create a private collection for first user
+    collection_create_payload["is_private"] = True
+
+    collection_create_json = utils.create_new_collection(mock_client, collection_create_payload, authorization_headers_0)
+    collection_id = collection_create_json["id"]
+
+    # create the second user
+    user_create_payload["username"] = "new_mock_user"
+    user_create_payload["email"] = "new_mock_email@email.com"
+
+    utils.create_new_user(mock_client, user_create_payload)
+
+    # get a jwt token for the second user
+    user_login_payload_1 = utils.get_user_login_payload(user_create_payload)
+    access_token_1 = utils.get_user_access_token(mock_client, user_login_payload_1)
+    
+    authorization_headers_1 = utils.get_authorization_headers(access_token_1)
+
+    # attempt to add mock files to collection without access permission
+    collection_add_payload["collection_id"] = collection_id
+    collection_add_data = {"collection_add_payload": json.dumps(collection_add_payload)}
+
+    collection_add_response = mock_client.post(COLLECTIONS_PREFIX + f"/{collection_id}/dotfiles", data=collection_add_data, files=mock_files, headers=authorization_headers_1)
+
+    collection_add_status_code = collection_add_response.status_code
+    assert collection_add_status_code == 403
+    
+    collection_add_json = collection_add_response.json()
+    assert collection_add_json["detail"] == "You do not have permission to access this collection"
+
+# collection content retrieval tests
 def test_valid_get_collection_content(mock_client, user_create_payload, collection_create_payload, collection_add_payload, mock_files):
+    """
+    Verifies that the api returns files from a collection
+    """
     # create a user
     utils.create_new_user(mock_client, user_create_payload)
 
@@ -286,6 +427,9 @@ def test_valid_get_collection_content(mock_client, user_create_payload, collecti
             assert archive_file_content == mock_file_content
 
 def test_get_collection_content_retrieval_limit_for_free_user(mock_client, user_create_payload, collection_create_payload):
+    """
+    Verifies that the api limits the number of file retrievals from a collection for free users
+    """
     # create a user
     utils.create_new_user(mock_client, user_create_payload)
 
@@ -317,6 +461,9 @@ def test_get_collection_content_retrieval_limit_for_free_user(mock_client, user_
 
 @pytest.mark.parametrize("user_tier", ["pro", "admin"])
 def test_get_collection_content_retrieval_limit_for_nonfree_user(mock_client_with_admin_tier, user_create_payload, collection_create_payload, user_tier):
+    """
+    Verifies that the api allows for unlimited file retrievals from a collection for non-free users
+    """
     # rename for convenience
     mock_client = mock_client_with_admin_tier
     
@@ -350,7 +497,76 @@ def test_get_collection_content_retrieval_limit_for_nonfree_user(mock_client_wit
     get_collection_content_status_code_1 = get_collection_content_response_1.status_code
     assert get_collection_content_status_code_1 == 200
 
+def test_get_collection_content_from_unknown_collection(mock_client, user_create_payload, collection_create_payload, collection_add_payload):
+    """
+    Verifies that the api rejects attempts to retrieve files from a non-existant collection
+    """
+    # create a user
+    utils.create_new_user(mock_client, user_create_payload)
+
+    # get a jwt token for authentication
+    user_login_payload = utils.get_user_login_payload(user_create_payload)
+    access_token = utils.get_user_access_token(mock_client, user_login_payload)
+    
+    authorization_headers = utils.get_authorization_headers(access_token)
+
+    # create an invalid collection id
+    collection_id = 1
+
+    # attempt to get file content of unknown collection
+    get_collection_content_response = mock_client.get(COLLECTIONS_PREFIX + f"/{collection_id}/archive", headers=authorization_headers)
+
+    get_collection_content_status_code = get_collection_content_response.status_code
+    assert get_collection_content_status_code == 404
+
+    get_collection_content_json = get_collection_content_response.json()
+    assert get_collection_content_json["detail"] == f"Collection {collection_id} not found"
+
+def test_get_collection_content_without_access_permission(mock_client, user_create_payload, collection_create_payload, collection_add_payload):
+    """
+    Verifies that the api rejects attempts to retrieve files from a collection that the user does not have access to
+    """
+    # create the first user
+    utils.create_new_user(mock_client, user_create_payload)
+
+    # get a jwt token for authentication for the first user
+    user_login_payload_0 = utils.get_user_login_payload(user_create_payload)
+    access_token_0 = utils.get_user_access_token(mock_client, user_login_payload_0)
+    
+    authorization_headers_0 = utils.get_authorization_headers(access_token_0)
+
+    # create a private collection for first user
+    collection_create_payload["is_private"] = True
+
+    collection_create_json = utils.create_new_collection(mock_client, collection_create_payload, authorization_headers_0)
+    collection_id = collection_create_json["id"]
+
+    # create the second user
+    user_create_payload["username"] = "new_mock_user"
+    user_create_payload["email"] = "new_mock_email@email.com"
+
+    utils.create_new_user(mock_client, user_create_payload)
+
+    # get a jwt token for the second user
+    user_login_payload_1 = utils.get_user_login_payload(user_create_payload)
+    access_token_1 = utils.get_user_access_token(mock_client, user_login_payload_1)
+    
+    authorization_headers_1 = utils.get_authorization_headers(access_token_1)
+
+    # attempt to get file content of collection without access permission
+    get_collection_content_response = mock_client.get(COLLECTIONS_PREFIX + f"/{collection_id}/archive", headers=authorization_headers_1)
+
+    get_collection_content_status_code = get_collection_content_response.status_code
+    assert get_collection_content_status_code == 403
+
+    get_collection_content_json = get_collection_content_response.json()
+    assert get_collection_content_json["detail"] == "You do not have permission to access this collection"
+
+# collection file paths retrieval tests
 def test_valid_get_collection_file_paths(mock_client, user_create_payload, collection_create_payload, collection_add_payload, mock_files):
+    """
+    Verifies that the api returns a list of file path information of files from a collection
+    """
     # create a user
     utils.create_new_user(mock_client, user_create_payload)
 
@@ -381,8 +597,77 @@ def test_valid_get_collection_file_paths(mock_client, user_create_payload, colle
     assert get_collection_file_paths_json[1]["path"] == collection_add_payload["content"][1]["path"]
     assert get_collection_file_paths_json[1]["filename"] == collection_add_payload["content"][1]["filename"]
 
+def test_get_collection_file_paths_from_unknown_collection(mock_client, user_create_payload, collection_create_payload, collection_add_payload):
+    """
+    Verifies that the api rejects attempts to retrieve file path information of files from a non-existant collection
+    """
+    # create a user
+    utils.create_new_user(mock_client, user_create_payload)
+
+    # get a jwt token for authentication
+    user_login_payload = utils.get_user_login_payload(user_create_payload)
+    access_token = utils.get_user_access_token(mock_client, user_login_payload)
+    
+    authorization_headers = utils.get_authorization_headers(access_token)
+
+    # create an invalid collection id
+    collection_id = 1
+
+    # attempt to get file paths of unknown collection
+    get_collection_file_paths_response = mock_client.get(COLLECTIONS_PREFIX + f"/{collection_id}/dotfiles", headers=authorization_headers)
+
+    get_collection_file_paths_status_code = get_collection_file_paths_response.status_code
+    assert get_collection_file_paths_status_code == 404
+
+    get_collection_file_paths_json = get_collection_file_paths_response.json()
+    assert get_collection_file_paths_json["detail"] == f"Collection {collection_id} not found"
+
+def test_get_collection_file_paths_without_access_permission(mock_client, user_create_payload, collection_create_payload, collection_add_payload):
+    """
+    Verifies that the api rejects attempts to retrieve file path information from a collection that the user has no access to
+    """
+    # create the first user
+    utils.create_new_user(mock_client, user_create_payload)
+
+    # get a jwt token for authentication for the first user
+    user_login_payload_0 = utils.get_user_login_payload(user_create_payload)
+    access_token_0 = utils.get_user_access_token(mock_client, user_login_payload_0)
+    
+    authorization_headers_0 = utils.get_authorization_headers(access_token_0)
+
+    # create a private collection for first user
+    collection_create_payload["is_private"] = True
+
+    collection_create_json = utils.create_new_collection(mock_client, collection_create_payload, authorization_headers_0)
+    collection_id = collection_create_json["id"]
+
+    # create the second user
+    user_create_payload["username"] = "new_mock_user"
+    user_create_payload["email"] = "new_mock_email@email.com"
+
+    utils.create_new_user(mock_client, user_create_payload)
+
+    # get a jwt token for the second user
+    user_login_payload_1 = utils.get_user_login_payload(user_create_payload)
+    access_token_1 = utils.get_user_access_token(mock_client, user_login_payload_1)
+    
+    authorization_headers_1 = utils.get_authorization_headers(access_token_1)
+
+    # attempt to get file paths of collection without access permission
+    get_collection_file_paths_response = mock_client.get(COLLECTIONS_PREFIX + f"/{collection_id}/dotfiles", headers=authorization_headers_1)
+
+    get_collection_file_paths_status_code = get_collection_file_paths_response.status_code
+    assert get_collection_file_paths_status_code == 403
+
+    get_collection_file_paths_json = get_collection_file_paths_response.json()
+    assert get_collection_file_paths_json["detail"] == "You do not have permission to access this collection"
+
+# collection content deletion tests
 @pytest.mark.parametrize("delete_index", FILE_INDICES)
 def test_valid_delete_file_in_collection(mock_client, user_create_payload, collection_create_payload, collection_add_payload, mock_files, delete_index):
+    """
+    Verifies that the api can properly delete files in a collection
+    """
     # create a user
     utils.create_new_user(mock_client, user_create_payload)
 
@@ -443,6 +728,9 @@ def test_valid_delete_file_in_collection(mock_client, user_create_payload, colle
     assert get_collection_file_paths_1 == collection_add_payload["content"]
 
 def test_delete_unknown_file_in_collection(mock_client, user_create_payload, collection_create_payload, collection_add_payload, mock_files):
+    """
+    Verifies that the api rejects attempts to delete non-existant files from a collection
+    """
     # create a user
     utils.create_new_user(mock_client, user_create_payload)
 
@@ -470,7 +758,78 @@ def test_delete_unknown_file_in_collection(mock_client, user_create_payload, col
     delete_file_collection_json = delete_file_in_collection_response.json()
     assert delete_file_collection_json["detail"] == f"File {filename} not found"
 
+def test_delete_file_in_unknown_collection(mock_client, user_create_payload, collection_create_payload, collection_add_payload):
+    """
+    Verifies that the api rejects attempts to delete files from a non-existant collection
+    """
+    # create a user
+    utils.create_new_user(mock_client, user_create_payload)
+
+    # get a jwt token for authentication
+    user_login_payload = utils.get_user_login_payload(user_create_payload)
+    access_token = utils.get_user_access_token(mock_client, user_login_payload)
+    
+    authorization_headers = utils.get_authorization_headers(access_token)
+
+    # create an invalid collection id
+    collection_id = 1
+
+    # attempt to delete file of unknown collection   
+    filename = "mock_filename"
+    delete_file_in_collection_response = mock_client.delete(COLLECTIONS_PREFIX + f"/{collection_id}/dotfiles/{filename}", headers=authorization_headers)
+
+    delete_file_in_collection_status_code = delete_file_in_collection_response.status_code
+    assert delete_file_in_collection_status_code == 404
+
+    delete_file_in_collection_json = delete_file_in_collection_response.json()
+    assert delete_file_in_collection_json["detail"] == f"Collection {collection_id} not found"
+
+def test_delete_file_in_collection_without_access_permission(mock_client, user_create_payload, collection_create_payload, collection_add_payload):
+    """
+    Verifies that the api rejects attempts to delete files from a collection that the user does not have access to
+    """
+    # create the first user
+    utils.create_new_user(mock_client, user_create_payload)
+
+    # get a jwt token for authentication for the first user
+    user_login_payload_0 = utils.get_user_login_payload(user_create_payload)
+    access_token_0 = utils.get_user_access_token(mock_client, user_login_payload_0)
+    
+    authorization_headers_0 = utils.get_authorization_headers(access_token_0)
+
+    # create a private collection for first user
+    collection_create_payload["is_private"] = True
+
+    collection_create_json = utils.create_new_collection(mock_client, collection_create_payload, authorization_headers_0)
+    collection_id = collection_create_json["id"]
+
+    # create the second user
+    user_create_payload["username"] = "new_mock_user"
+    user_create_payload["email"] = "new_mock_email@email.com"
+
+    utils.create_new_user(mock_client, user_create_payload)
+
+    # get a jwt token for the second user
+    user_login_payload_1 = utils.get_user_login_payload(user_create_payload)
+    access_token_1 = utils.get_user_access_token(mock_client, user_login_payload_1)
+    
+    authorization_headers_1 = utils.get_authorization_headers(access_token_1)
+
+    # attempt to delete file of collection without access permission   
+    filename = "mock_filename"
+    delete_file_in_collection_response = mock_client.delete(COLLECTIONS_PREFIX + f"/{collection_id}/dotfiles/{filename}", headers=authorization_headers_1)
+
+    delete_file_in_collection_status_code = delete_file_in_collection_response.status_code
+    assert delete_file_in_collection_status_code == 403
+
+    delete_file_in_collection_json = delete_file_in_collection_response.json()
+    assert delete_file_in_collection_json["detail"] == "You do not have permission to access this collection"
+
+# collection deletion tests
 def test_valid_delete_collection(mock_client, user_create_payload, collection_create_payload, collection_add_payload, mock_files):
+    """
+    Verifies that the api can properly delete collections
+    """
     # create a user
     utils.create_new_user(mock_client, user_create_payload)
 
@@ -503,100 +862,11 @@ def test_valid_delete_collection(mock_client, user_create_payload, collection_cr
     
     assert len(get_collection_list_json_1) == 0
 
-def test_add_to_unknown_collection(mock_client, user_create_payload, collection_create_payload, collection_add_payload, mock_files):
-    # create a user
-    utils.create_new_user(mock_client, user_create_payload)
-
-    # get a jwt token for authentication
-    user_login_payload = utils.get_user_login_payload(user_create_payload)
-    access_token = utils.get_user_access_token(mock_client, user_login_payload)
-    
-    authorization_headers = utils.get_authorization_headers(access_token)
-
-    # create an invalid collection id
-    collection_id = 1
-
-    # attempt to add mock files to unknown collection
-    collection_add_payload["collection_id"] = collection_id
-    collection_add_data = {"collection_add_payload": json.dumps(collection_add_payload)}
-
-    collection_add_response = mock_client.post(COLLECTIONS_PREFIX + f"/{collection_id}/dotfiles", data=collection_add_data, files=mock_files, headers=authorization_headers)
-
-    collection_add_status_code = collection_add_response.status_code
-    assert collection_add_status_code == 404
-    
-    collection_add_json = collection_add_response.json()
-    assert collection_add_json["detail"] == f"Collection {collection_id} not found"
-
-def test_get_collection_content_from_unknown_collection(mock_client, user_create_payload, collection_create_payload, collection_add_payload):
-     # create a user
-    utils.create_new_user(mock_client, user_create_payload)
-
-    # get a jwt token for authentication
-    user_login_payload = utils.get_user_login_payload(user_create_payload)
-    access_token = utils.get_user_access_token(mock_client, user_login_payload)
-    
-    authorization_headers = utils.get_authorization_headers(access_token)
-
-    # create an invalid collection id
-    collection_id = 1
-
-    # attempt to get file content of unknown collection
-    get_collection_content_response = mock_client.get(COLLECTIONS_PREFIX + f"/{collection_id}/archive", headers=authorization_headers)
-
-    get_collection_content_status_code = get_collection_content_response.status_code
-    assert get_collection_content_status_code == 404
-
-    get_collection_content_json = get_collection_content_response.json()
-    assert get_collection_content_json["detail"] == f"Collection {collection_id} not found"
-
-def test_get_collection_file_paths_from_unknown_collection(mock_client, user_create_payload, collection_create_payload, collection_add_payload):
-    # create a user
-    utils.create_new_user(mock_client, user_create_payload)
-
-    # get a jwt token for authentication
-    user_login_payload = utils.get_user_login_payload(user_create_payload)
-    access_token = utils.get_user_access_token(mock_client, user_login_payload)
-    
-    authorization_headers = utils.get_authorization_headers(access_token)
-
-    # create an invalid collection id
-    collection_id = 1
-
-    # attempt to get file paths of unknown collection
-    get_collection_file_paths_response = mock_client.get(COLLECTIONS_PREFIX + f"/{collection_id}/dotfiles", headers=authorization_headers)
-
-    get_collection_file_paths_status_code = get_collection_file_paths_response.status_code
-    assert get_collection_file_paths_status_code == 404
-
-    get_collection_file_paths_json = get_collection_file_paths_response.json()
-    assert get_collection_file_paths_json["detail"] == f"Collection {collection_id} not found"
-
-def test_delete_file_in_unknown_collection(mock_client, user_create_payload, collection_create_payload, collection_add_payload):
-    # create a user
-    utils.create_new_user(mock_client, user_create_payload)
-
-    # get a jwt token for authentication
-    user_login_payload = utils.get_user_login_payload(user_create_payload)
-    access_token = utils.get_user_access_token(mock_client, user_login_payload)
-    
-    authorization_headers = utils.get_authorization_headers(access_token)
-
-    # create an invalid collection id
-    collection_id = 1
-
-    # attempt to delete file of unknown collection   
-    filename = "mock_filename"
-    delete_file_in_collection_response = mock_client.delete(COLLECTIONS_PREFIX + f"/{collection_id}/dotfiles/{filename}", headers=authorization_headers)
-
-    delete_file_in_collection_status_code = delete_file_in_collection_response.status_code
-    assert delete_file_in_collection_status_code == 404
-
-    delete_file_in_collection_json = delete_file_in_collection_response.json()
-    assert delete_file_in_collection_json["detail"] == f"Collection {collection_id} not found"
-
 def test_delete_unknown_collection(mock_client, user_create_payload, collection_create_payload, collection_add_payload):
-     # create a user
+    """
+    Verifies that the api rejects attempts to delete non-existant collections
+    """
+    # create a user
     utils.create_new_user(mock_client, user_create_payload)
 
     # get a jwt token for authentication
@@ -616,6 +886,46 @@ def test_delete_unknown_collection(mock_client, user_create_payload, collection_
 
     delete_collection_json = delete_collection_response.json()
     assert delete_collection_json["detail"] == f"Collection {collection_id} not found"
+
+def test_delete_collection_without_access_permission(mock_client, user_create_payload, collection_create_payload, collection_add_payload):
+    """
+    Verifies that the api rejects attempts to delete a collection that the user has no access to
+    """
+    # create the first user
+    utils.create_new_user(mock_client, user_create_payload)
+
+    # get a jwt token for authentication for the first user
+    user_login_payload_0 = utils.get_user_login_payload(user_create_payload)
+    access_token_0 = utils.get_user_access_token(mock_client, user_login_payload_0)
+    
+    authorization_headers_0 = utils.get_authorization_headers(access_token_0)
+
+    # create a private collection for first user
+    collection_create_payload["is_private"] = True
+
+    collection_create_json = utils.create_new_collection(mock_client, collection_create_payload, authorization_headers_0)
+    collection_id = collection_create_json["id"]
+
+    # create the second user
+    user_create_payload["username"] = "new_mock_user"
+    user_create_payload["email"] = "new_mock_email@email.com"
+
+    utils.create_new_user(mock_client, user_create_payload)
+
+    # get a jwt token for the second user
+    user_login_payload_1 = utils.get_user_login_payload(user_create_payload)
+    access_token_1 = utils.get_user_access_token(mock_client, user_login_payload_1)
+    
+    authorization_headers_1 = utils.get_authorization_headers(access_token_1)
+
+    # attempt to delete a collection without access permission
+    delete_collection_response = mock_client.delete(COLLECTIONS_PREFIX + f"/{collection_id}", headers=authorization_headers_1)
+    
+    delete_collection_status_code = delete_collection_response.status_code
+    assert delete_collection_status_code == 403
+
+    delete_collection_json = delete_collection_response.json()
+    assert delete_collection_json["detail"] == "You do not have permission to access this collection"
 
 def test_operate_on_collection_without_access_permission(mock_client, user_create_payload, collection_create_payload, collection_add_payload, mock_files):
    # create the first user
@@ -693,231 +1003,3 @@ def test_operate_on_collection_without_access_permission(mock_client, user_creat
 
     delete_collection_json = delete_collection_response.json()
     assert delete_collection_json["detail"] == "You do not have permission to access this collection"
-
-def test_add_to_collection_without_access_permission(mock_client, user_create_payload, collection_create_payload, collection_add_payload, mock_files):
-    # create the first user
-    utils.create_new_user(mock_client, user_create_payload)
-
-    # get a jwt token for authentication for the first user
-    user_login_payload_0 = utils.get_user_login_payload(user_create_payload)
-    access_token_0 = utils.get_user_access_token(mock_client, user_login_payload_0)
-    
-    authorization_headers_0 = utils.get_authorization_headers(access_token_0)
-
-    # create a private collection for first user
-    collection_create_payload["is_private"] = True
-
-    collection_create_json = utils.create_new_collection(mock_client, collection_create_payload, authorization_headers_0)
-    collection_id = collection_create_json["id"]
-
-    # create the second user
-    user_create_payload["username"] = "new_mock_user"
-    user_create_payload["email"] = "new_mock_email@email.com"
-
-    utils.create_new_user(mock_client, user_create_payload)
-
-    # get a jwt token for the second user
-    user_login_payload_1 = utils.get_user_login_payload(user_create_payload)
-    access_token_1 = utils.get_user_access_token(mock_client, user_login_payload_1)
-    
-    authorization_headers_1 = utils.get_authorization_headers(access_token_1)
-
-    # attempt to add mock files to collection without access permission
-    collection_add_payload["collection_id"] = collection_id
-    collection_add_data = {"collection_add_payload": json.dumps(collection_add_payload)}
-
-    collection_add_response = mock_client.post(COLLECTIONS_PREFIX + f"/{collection_id}/dotfiles", data=collection_add_data, files=mock_files, headers=authorization_headers_1)
-
-    collection_add_status_code = collection_add_response.status_code
-    assert collection_add_status_code == 403
-    
-    collection_add_json = collection_add_response.json()
-    assert collection_add_json["detail"] == "You do not have permission to access this collection"
-
-def test_get_collection_content_without_access_permission(mock_client, user_create_payload, collection_create_payload, collection_add_payload):
- # create the first user
-    utils.create_new_user(mock_client, user_create_payload)
-
-    # get a jwt token for authentication for the first user
-    user_login_payload_0 = utils.get_user_login_payload(user_create_payload)
-    access_token_0 = utils.get_user_access_token(mock_client, user_login_payload_0)
-    
-    authorization_headers_0 = utils.get_authorization_headers(access_token_0)
-
-    # create a private collection for first user
-    collection_create_payload["is_private"] = True
-
-    collection_create_json = utils.create_new_collection(mock_client, collection_create_payload, authorization_headers_0)
-    collection_id = collection_create_json["id"]
-
-    # create the second user
-    user_create_payload["username"] = "new_mock_user"
-    user_create_payload["email"] = "new_mock_email@email.com"
-
-    utils.create_new_user(mock_client, user_create_payload)
-
-    # get a jwt token for the second user
-    user_login_payload_1 = utils.get_user_login_payload(user_create_payload)
-    access_token_1 = utils.get_user_access_token(mock_client, user_login_payload_1)
-    
-    authorization_headers_1 = utils.get_authorization_headers(access_token_1)
-
-    # attempt to get file content of collection without access permission
-    get_collection_content_response = mock_client.get(COLLECTIONS_PREFIX + f"/{collection_id}/archive", headers=authorization_headers_1)
-
-    get_collection_content_status_code = get_collection_content_response.status_code
-    assert get_collection_content_status_code == 403
-
-    get_collection_content_json = get_collection_content_response.json()
-    assert get_collection_content_json["detail"] == "You do not have permission to access this collection"
-
-def test_get_collection_file_paths_without_access_permission(mock_client, user_create_payload, collection_create_payload, collection_add_payload):
- # create the first user
-    utils.create_new_user(mock_client, user_create_payload)
-
-    # get a jwt token for authentication for the first user
-    user_login_payload_0 = utils.get_user_login_payload(user_create_payload)
-    access_token_0 = utils.get_user_access_token(mock_client, user_login_payload_0)
-    
-    authorization_headers_0 = utils.get_authorization_headers(access_token_0)
-
-    # create a private collection for first user
-    collection_create_payload["is_private"] = True
-
-    collection_create_json = utils.create_new_collection(mock_client, collection_create_payload, authorization_headers_0)
-    collection_id = collection_create_json["id"]
-
-    # create the second user
-    user_create_payload["username"] = "new_mock_user"
-    user_create_payload["email"] = "new_mock_email@email.com"
-
-    utils.create_new_user(mock_client, user_create_payload)
-
-    # get a jwt token for the second user
-    user_login_payload_1 = utils.get_user_login_payload(user_create_payload)
-    access_token_1 = utils.get_user_access_token(mock_client, user_login_payload_1)
-    
-    authorization_headers_1 = utils.get_authorization_headers(access_token_1)
-
-    # attempt to get file paths of collection without access permission
-    get_collection_file_paths_response = mock_client.get(COLLECTIONS_PREFIX + f"/{collection_id}/dotfiles", headers=authorization_headers_1)
-
-    get_collection_file_paths_status_code = get_collection_file_paths_response.status_code
-    assert get_collection_file_paths_status_code == 403
-
-    get_collection_file_paths_json = get_collection_file_paths_response.json()
-    assert get_collection_file_paths_json["detail"] == "You do not have permission to access this collection"
-
-def test_delete_file_in_collection_without_access_permission(mock_client, user_create_payload, collection_create_payload, collection_add_payload):
- # create the first user
-    utils.create_new_user(mock_client, user_create_payload)
-
-    # get a jwt token for authentication for the first user
-    user_login_payload_0 = utils.get_user_login_payload(user_create_payload)
-    access_token_0 = utils.get_user_access_token(mock_client, user_login_payload_0)
-    
-    authorization_headers_0 = utils.get_authorization_headers(access_token_0)
-
-    # create a private collection for first user
-    collection_create_payload["is_private"] = True
-
-    collection_create_json = utils.create_new_collection(mock_client, collection_create_payload, authorization_headers_0)
-    collection_id = collection_create_json["id"]
-
-    # create the second user
-    user_create_payload["username"] = "new_mock_user"
-    user_create_payload["email"] = "new_mock_email@email.com"
-
-    utils.create_new_user(mock_client, user_create_payload)
-
-    # get a jwt token for the second user
-    user_login_payload_1 = utils.get_user_login_payload(user_create_payload)
-    access_token_1 = utils.get_user_access_token(mock_client, user_login_payload_1)
-    
-    authorization_headers_1 = utils.get_authorization_headers(access_token_1)
-
-    # attempt to delete file of collection without access permission   
-    filename = "mock_filename"
-    delete_file_in_collection_response = mock_client.delete(COLLECTIONS_PREFIX + f"/{collection_id}/dotfiles/{filename}", headers=authorization_headers_1)
-
-    delete_file_in_collection_status_code = delete_file_in_collection_response.status_code
-    assert delete_file_in_collection_status_code == 403
-
-    delete_file_in_collection_json = delete_file_in_collection_response.json()
-    assert delete_file_in_collection_json["detail"] == "You do not have permission to access this collection"
-
-def test_delete_collection_without_access_permission(mock_client, user_create_payload, collection_create_payload, collection_add_payload):
- # create the first user
-    utils.create_new_user(mock_client, user_create_payload)
-
-    # get a jwt token for authentication for the first user
-    user_login_payload_0 = utils.get_user_login_payload(user_create_payload)
-    access_token_0 = utils.get_user_access_token(mock_client, user_login_payload_0)
-    
-    authorization_headers_0 = utils.get_authorization_headers(access_token_0)
-
-    # create a private collection for first user
-    collection_create_payload["is_private"] = True
-
-    collection_create_json = utils.create_new_collection(mock_client, collection_create_payload, authorization_headers_0)
-    collection_id = collection_create_json["id"]
-
-    # create the second user
-    user_create_payload["username"] = "new_mock_user"
-    user_create_payload["email"] = "new_mock_email@email.com"
-
-    utils.create_new_user(mock_client, user_create_payload)
-
-    # get a jwt token for the second user
-    user_login_payload_1 = utils.get_user_login_payload(user_create_payload)
-    access_token_1 = utils.get_user_access_token(mock_client, user_login_payload_1)
-    
-    authorization_headers_1 = utils.get_authorization_headers(access_token_1)
-
-    # attempt to delete a collection without access permission
-    delete_collection_response = mock_client.delete(COLLECTIONS_PREFIX + f"/{collection_id}", headers=authorization_headers_1)
-    
-    delete_collection_status_code = delete_collection_response.status_code
-    assert delete_collection_status_code == 403
-
-    delete_collection_json = delete_collection_response.json()
-    assert delete_collection_json["detail"] == "You do not have permission to access this collection"
-
-def test_get_public_collections(mock_client, user_create_payload, collection_create_payload):
-    # create a user
-    utils.create_new_user(mock_client, user_create_payload)
-
-    # get a jwt token for authentication
-    user_login_payload = utils.get_user_login_payload(user_create_payload)
-    access_token = utils.get_user_access_token(mock_client, user_login_payload)
-    
-    authorization_headers = utils.get_authorization_headers(access_token)
-
-    # create a private collection
-    private_collection_create_payload = collection_create_payload.copy()
-    private_collection_name = "private_mock_collection"
-
-    private_collection_create_payload["name"] = private_collection_name
-    private_collection_create_payload["is_private"] = True
- 
-    utils.create_new_collection(mock_client, private_collection_create_payload, authorization_headers)
-
-    # create a public collection
-    public_collection_create_payload = collection_create_payload.copy()
-    public_collection_name = "public_mock_collection"
-
-    public_collection_create_payload["name"] = public_collection_name
-    public_collection_create_payload["is_private"] = False
-
-    utils.create_new_collection(mock_client, public_collection_create_payload, authorization_headers)
-
-    # get a list of only public collections
-    public_collections_response = mock_client.get(COLLECTIONS_PREFIX + "/public")
-
-    public_collections_status_code = public_collections_response.status_code
-    assert public_collections_status_code == 200
-
-    public_collections_json = public_collections_response.json()
-
-    assert len(public_collections_json) == 1
-    assert public_collections_json[0]["name"] == public_collection_name

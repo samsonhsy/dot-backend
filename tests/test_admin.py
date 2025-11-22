@@ -6,7 +6,34 @@ ADMIN_PREFIX = "/admin"
 
 PROMOTE_USER_PARAMETERS = ["pro", "admin"]
 
+# insufficient privileges tests
+def test_insufficient_privileges(mock_client, user_create_payload, key_generation_request):
+    """
+    Verifies that the api rejects attempts to generate license keys by non-admin users
+    """
+    # create a user
+    utils.create_new_user(mock_client, user_create_payload)
+
+    # get a jwt token for authentication
+    user_login_payload = utils.get_user_login_payload(user_create_payload)
+    access_token = utils.get_user_access_token(mock_client, user_login_payload)
+
+    # attempt to generate license keys with insufficient privileges
+    authorization_headers = utils.get_authorization_headers(access_token)
+    
+    generate_license_response = mock_client.post(ADMIN_PREFIX + "/license", json=key_generation_request, headers=authorization_headers)
+
+    generate_license_status_code = generate_license_response.status_code
+    assert generate_license_status_code == 403
+
+    generate_license_json = generate_license_response.json()
+    assert generate_license_json["detail"] == "Insufficient privileges"
+
+# license creation tests
 def test_create_license_keys(mock_client_with_admin_tier, key_generation_request):
+    """
+    Verifies that the api can properly generate license keys
+    """
     # rename for convenience
     mock_client = mock_client_with_admin_tier
 
@@ -21,7 +48,11 @@ def test_create_license_keys(mock_client_with_admin_tier, key_generation_request
     
     assert len(generated_keys) == key_generation_request["quantity"] 
 
+# license listing tests
 def test_list_license_keys(mock_client_with_admin_tier, key_generation_request):
+    """
+    Verifies that the api returns a list of all license keys in the database
+    """
     # rename for convenience
     mock_client = mock_client_with_admin_tier
 
@@ -44,7 +75,11 @@ def test_list_license_keys(mock_client_with_admin_tier, key_generation_request):
     assert len(list_license_keys_json) == len(generated_keys)
     assert listed_keys == generated_keys
 
+# license deletion tests
 def test_valid_delete_license_key(mock_client_with_admin_tier, key_generation_request):
+    """
+    Verifies that the api can properly delete a license key from the database
+    """
     # rename for convenience
     mock_client = mock_client_with_admin_tier
 
@@ -78,6 +113,9 @@ def test_valid_delete_license_key(mock_client_with_admin_tier, key_generation_re
     assert listed_keys == expected_listed_keys
 
 def test_delete_unknown_license_key(mock_client_with_admin_tier):
+    """
+    Verifies that the api rejects attempts to delete non-existant license keys
+    """
     # rename for convenience
     mock_client = mock_client_with_admin_tier
 
@@ -93,8 +131,12 @@ def test_delete_unknown_license_key(mock_client_with_admin_tier):
 
     assert delete_license_key_json["detail"] == "License key not found"
 
+# user promotion tests
 @pytest.mark.parametrize("target_tier", PROMOTE_USER_PARAMETERS)
 def test_valid_promote_user(mock_client_with_admin_tier, user_create_payload, target_tier):
+    """
+    Verifies that the api can properly promote a user to a higher tier
+    """
     # rename for convenience
     mock_client = mock_client_with_admin_tier
 
@@ -130,6 +172,9 @@ def test_valid_promote_user(mock_client_with_admin_tier, user_create_payload, ta
     
 @pytest.mark.parametrize("target_tier", PROMOTE_USER_PARAMETERS)
 def test_promote_user_to_same_tier(mock_client_with_admin_tier, user_create_payload, target_tier):
+    """
+    Verifies that the api rejects attempts to promote a user to the same tier as the user
+    """
     # rename for convenience
     mock_client = mock_client_with_admin_tier
 
@@ -168,6 +213,9 @@ def test_promote_user_to_same_tier(mock_client_with_admin_tier, user_create_payl
     assert user_promote_json_2["detail"] == f"User {username} is already in {target_tier} tier"
 
 def test_promote_user_to_unknown_tier(mock_client_with_admin_tier, user_create_payload):
+    """
+    Verifies that the api rejects attempts to promote users to a non-existant tier
+    """
     # rename for convenience
     mock_client = mock_client_with_admin_tier
 
@@ -189,6 +237,9 @@ def test_promote_user_to_unknown_tier(mock_client_with_admin_tier, user_create_p
 
 @pytest.mark.parametrize("target_tier", PROMOTE_USER_PARAMETERS)
 def test_promote_unknown_user(mock_client_with_admin_tier, target_tier):
+    """
+    Verifies that the api rejects attempts to promote non-existant users
+    """
     # rename for convenience
     mock_client = mock_client_with_admin_tier
 
@@ -209,21 +260,3 @@ def test_promote_unknown_user(mock_client_with_admin_tier, target_tier):
     user_promote_json = user_promote_response.json()
     assert user_promote_json["detail"] == "User not found"
 
-def test_insufficient_privileges(mock_client, user_create_payload, key_generation_request):
-    # create a user
-    utils.create_new_user(mock_client, user_create_payload)
-
-    # get a jwt token for authentication
-    user_login_payload = utils.get_user_login_payload(user_create_payload)
-    access_token = utils.get_user_access_token(mock_client, user_login_payload)
-
-    # attempt to generate license keys with insufficient privileges
-    authorization_headers = utils.get_authorization_headers(access_token)
-    
-    generate_license_response = mock_client.post(ADMIN_PREFIX + "/license", json=key_generation_request, headers=authorization_headers)
-
-    generate_license_status_code = generate_license_response.status_code
-    assert generate_license_status_code == 403
-
-    generate_license_json = generate_license_response.json()
-    assert generate_license_json["detail"] == "Insufficient privileges"
