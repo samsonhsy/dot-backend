@@ -882,3 +882,42 @@ def test_delete_collection_without_access_permission(mock_client, user_create_pa
 
     delete_collection_json = delete_collection_response.json()
     assert delete_collection_json["detail"] == "You do not have permission to access this collection"
+
+def test_get_public_collections(mock_client, user_create_payload, collection_create_payload):
+    # create a user
+    utils.create_new_user(mock_client, user_create_payload)
+
+    # get a jwt token for authentication
+    user_login_payload = utils.get_user_login_payload(user_create_payload)
+    access_token = utils.get_user_access_token(mock_client, user_login_payload)
+    
+    authorization_headers = utils.get_authorization_headers(access_token)
+
+    # create a private collection
+    private_collection_create_payload = collection_create_payload.copy()
+    private_collection_name = "private_mock_collection"
+
+    private_collection_create_payload["name"] = private_collection_name
+    private_collection_create_payload["is_private"] = True
+ 
+    utils.create_new_collection(mock_client, private_collection_create_payload, authorization_headers)
+
+    # create a public collection
+    public_collection_create_payload = collection_create_payload.copy()
+    public_collection_name = "public_mock_collection"
+
+    public_collection_create_payload["name"] = public_collection_name
+    public_collection_create_payload["is_private"] = False
+
+    utils.create_new_collection(mock_client, public_collection_create_payload, authorization_headers)
+
+    # get a list of only public collections
+    public_collections_response = mock_client.get(COLLECTIONS_PREFIX + "/public")
+
+    public_collections_status_code = public_collections_response.status_code
+    assert public_collections_status_code == 200
+
+    public_collections_json = public_collections_response.json()
+
+    assert len(public_collections_json) == 1
+    assert public_collections_json[0]["name"] == public_collection_name
