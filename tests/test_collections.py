@@ -503,8 +503,8 @@ def test_valid_delete_collection(mock_client, user_create_payload, collection_cr
     
     assert len(get_collection_list_json_1) == 0
 
-def test_operate_on_unknown_collection(mock_client, user_create_payload, collection_create_payload, collection_add_payload, mock_files):
-   # create a user
+def test_add_to_unknown_collection(mock_client, user_create_payload, collection_create_payload, collection_add_payload, mock_files):
+    # create a user
     utils.create_new_user(mock_client, user_create_payload)
 
     # get a jwt token for authentication
@@ -528,6 +528,19 @@ def test_operate_on_unknown_collection(mock_client, user_create_payload, collect
     collection_add_json = collection_add_response.json()
     assert collection_add_json["detail"] == f"Collection {collection_id} not found"
 
+def test_get_collection_content_from_unknown_collection(mock_client, user_create_payload, collection_create_payload, collection_add_payload):
+     # create a user
+    utils.create_new_user(mock_client, user_create_payload)
+
+    # get a jwt token for authentication
+    user_login_payload = utils.get_user_login_payload(user_create_payload)
+    access_token = utils.get_user_access_token(mock_client, user_login_payload)
+    
+    authorization_headers = utils.get_authorization_headers(access_token)
+
+    # create an invalid collection id
+    collection_id = 1
+
     # attempt to get file content of unknown collection
     get_collection_content_response = mock_client.get(COLLECTIONS_PREFIX + f"/{collection_id}/archive", headers=authorization_headers)
 
@@ -536,6 +549,19 @@ def test_operate_on_unknown_collection(mock_client, user_create_payload, collect
 
     get_collection_content_json = get_collection_content_response.json()
     assert get_collection_content_json["detail"] == f"Collection {collection_id} not found"
+
+def test_get_collection_file_paths_from_unknown_collection(mock_client, user_create_payload, collection_create_payload, collection_add_payload):
+    # create a user
+    utils.create_new_user(mock_client, user_create_payload)
+
+    # get a jwt token for authentication
+    user_login_payload = utils.get_user_login_payload(user_create_payload)
+    access_token = utils.get_user_access_token(mock_client, user_login_payload)
+    
+    authorization_headers = utils.get_authorization_headers(access_token)
+
+    # create an invalid collection id
+    collection_id = 1
 
     # attempt to get file paths of unknown collection
     get_collection_file_paths_response = mock_client.get(COLLECTIONS_PREFIX + f"/{collection_id}/dotfiles", headers=authorization_headers)
@@ -546,6 +572,19 @@ def test_operate_on_unknown_collection(mock_client, user_create_payload, collect
     get_collection_file_paths_json = get_collection_file_paths_response.json()
     assert get_collection_file_paths_json["detail"] == f"Collection {collection_id} not found"
 
+def test_delete_file_in_unknown_collection(mock_client, user_create_payload, collection_create_payload, collection_add_payload):
+    # create a user
+    utils.create_new_user(mock_client, user_create_payload)
+
+    # get a jwt token for authentication
+    user_login_payload = utils.get_user_login_payload(user_create_payload)
+    access_token = utils.get_user_access_token(mock_client, user_login_payload)
+    
+    authorization_headers = utils.get_authorization_headers(access_token)
+
+    # create an invalid collection id
+    collection_id = 1
+
     # attempt to delete file of unknown collection   
     filename = "mock_filename"
     delete_file_in_collection_response = mock_client.delete(COLLECTIONS_PREFIX + f"/{collection_id}/dotfiles/{filename}", headers=authorization_headers)
@@ -555,6 +594,19 @@ def test_operate_on_unknown_collection(mock_client, user_create_payload, collect
 
     delete_file_in_collection_json = delete_file_in_collection_response.json()
     assert delete_file_in_collection_json["detail"] == f"Collection {collection_id} not found"
+
+def test_delete_unknown_collection(mock_client, user_create_payload, collection_create_payload, collection_add_payload):
+     # create a user
+    utils.create_new_user(mock_client, user_create_payload)
+
+    # get a jwt token for authentication
+    user_login_payload = utils.get_user_login_payload(user_create_payload)
+    access_token = utils.get_user_access_token(mock_client, user_login_payload)
+    
+    authorization_headers = utils.get_authorization_headers(access_token)
+
+    # create an invalid collection id
+    collection_id = 1
 
     # attempt to delete an unknown collection
     delete_collection_response = mock_client.delete(COLLECTIONS_PREFIX + f"/{collection_id}", headers=authorization_headers)
