@@ -21,6 +21,78 @@ def test_create_license_keys(mock_client_with_admin_tier, key_generation_request
     
     assert len(generated_keys) == key_generation_request["quantity"] 
 
+def test_list_license_keys(mock_client_with_admin_tier, key_generation_request):
+    # rename for convenience
+    mock_client = mock_client_with_admin_tier
+
+    # generate license keys
+    key_quantity = key_generation_request["quantity"]
+    generate_license_json = utils.generate_license_keys(mock_client, key_quantity)
+
+    generated_keys = generate_license_json["generated_keys"]
+
+    # get a list of license keys
+    list_license_keys_response = mock_client.get(ADMIN_PREFIX + "/license")
+
+    list_license_keys_status_code = list_license_keys_response.status_code
+    assert list_license_keys_status_code == 200
+
+    list_license_keys_json = list_license_keys_response.json()
+
+    listed_keys = [license_key["key_string"] for license_key in list_license_keys_json]
+
+    assert len(list_license_keys_json) == len(generated_keys)
+    assert listed_keys == generated_keys
+
+def test_valid_delete_license_key(mock_client_with_admin_tier, key_generation_request):
+    # rename for convenience
+    mock_client = mock_client_with_admin_tier
+
+    # generate license keys
+    key_quantity = key_generation_request["quantity"]
+    generate_license_json = utils.generate_license_keys(mock_client, key_quantity)
+
+    generated_keys = generate_license_json["generated_keys"]
+
+    # check the number of license keys before deletion
+    list_license_keys_json_0 = utils.list_license_keys(mock_client)
+
+    assert len(list_license_keys_json_0) == key_quantity
+
+    # delete the a license key
+    del generated_keys[0]
+    expected_listed_keys = generated_keys
+
+    key_id = list_license_keys_json_0[0]["id"]
+
+    delete_license_key_repsonse = mock_client.delete(ADMIN_PREFIX + f"/license/{key_id}")
+
+    delete_license_key_status_code = delete_license_key_repsonse.status_code
+    assert delete_license_key_status_code == 204
+
+    # check if license key has been deleted
+    list_license_keys_json_1 = utils.list_license_keys(mock_client)
+    listed_keys = [license_key["key_string"] for license_key in list_license_keys_json_1]
+
+    assert len(list_license_keys_json_1) == key_quantity - 1
+    assert listed_keys == expected_listed_keys
+
+def test_delete_unknown_license_key(mock_client_with_admin_tier):
+    # rename for convenience
+    mock_client = mock_client_with_admin_tier
+
+    # attempt to delete an unknown license key
+    unknown_key_id = 0
+
+    delete_license_key_repsonse = mock_client.delete(ADMIN_PREFIX + f"/license/{unknown_key_id}")
+
+    delete_license_key_status_code = delete_license_key_repsonse.status_code
+    assert delete_license_key_status_code == 404
+
+    delete_license_key_json = delete_license_key_repsonse.json()
+
+    assert delete_license_key_json["detail"] == "License key not found"
+
 @pytest.mark.parametrize("target_tier", PROMOTE_USER_PARAMETERS)
 def test_valid_promote_user(mock_client_with_admin_tier, user_create_payload, target_tier):
     # rename for convenience

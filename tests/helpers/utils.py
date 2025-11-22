@@ -70,6 +70,16 @@ def generate_license_keys(mock_client, quantity):
 
     return generate_license_json
 
+def list_license_keys(mock_client):
+    list_license_keys_response = mock_client.get(ADMIN_PREFIX + "/license")
+
+    list_license_keys_status_code = list_license_keys_response.status_code
+    assert list_license_keys_status_code == 200
+
+    list_license_keys_json = list_license_keys_response.json()
+
+    return list_license_keys_json
+
 def get_license_key_payload(license_key):
     return {
         "key_string" : license_key
