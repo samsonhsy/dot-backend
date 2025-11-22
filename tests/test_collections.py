@@ -11,7 +11,8 @@ from app.core.settings import settings
 
 COLLECTIONS_PREFIX = "/collections"
 
-FILE_INDICES = [0, 1]
+FILE_INDICES_PARAMETERS = [0, 1]
+USER_TIER_PARAMETERS = ["pro", "admin"]
 
 FREE_TIER_RETRIEVAL_LIMIT = settings.FREE_TIER_RETRIEVAL_LIMIT
 
@@ -270,7 +271,7 @@ def test_add_to_collection_with_insufficient_file_count(mock_client, user_create
 
     assert collection_add_json["detail"] == f"Number of files ({len(mock_files)}) must match number of content entries ({len(collection_add_payload["content"])})"
 
-@pytest.mark.parametrize("mismatch_index", FILE_INDICES)
+@pytest.mark.parametrize("mismatch_index", FILE_INDICES_PARAMETERS)
 def test_add_to_collection_with_mismatch_filenames(mock_client, user_create_payload, collection_create_payload, collection_add_payload, mock_files, mismatch_index):
     """
     Verifies that the api rejects attempts to add files to a collection by providing files with different filenames than those specified in the request data
@@ -308,7 +309,7 @@ def test_add_to_collection_with_mismatch_filenames(mock_client, user_create_payl
     collection_add_json = collection_add_response.json()
     assert collection_add_json["detail"] == f"Filename mismatch at index {mismatch_index}: uploaded file is '{file_filename}' but content specifies '{content_filename}'"
 
-def test_add_to_unknown_collection(mock_client, user_create_payload, collection_create_payload, collection_add_payload, mock_files):
+def test_add_to_invalid_collection(mock_client, user_create_payload, collection_create_payload, collection_add_payload, mock_files):
     """
     Verifies that the api rejects attempts to add files to a non-existant collection
     """
@@ -324,7 +325,7 @@ def test_add_to_unknown_collection(mock_client, user_create_payload, collection_
     # create an invalid collection id
     collection_id = 1
 
-    # attempt to add mock files to unknown collection
+    # attempt to add mock files to invalid collection
     collection_add_payload["collection_id"] = collection_id
     collection_add_data = {"collection_add_payload": json.dumps(collection_add_payload)}
 
@@ -459,7 +460,7 @@ def test_get_collection_content_retrieval_limit_for_free_user(mock_client, user_
     get_collection_content_json_1 = get_collection_content_response_1.json()
     assert get_collection_content_json_1["detail"] == f"You have exceeded your monthly limit of {FREE_TIER_RETRIEVAL_LIMIT} retrievals. Please upgrade to a Pro account for unlimited access."
 
-@pytest.mark.parametrize("user_tier", ["pro", "admin"])
+@pytest.mark.parametrize("user_tier", USER_TIER_PARAMETERS)
 def test_get_collection_content_retrieval_limit_for_nonfree_user(mock_client_with_admin_tier, user_create_payload, collection_create_payload, user_tier):
     """
     Verifies that the api allows for unlimited file retrievals from a collection for non-free users
@@ -497,7 +498,7 @@ def test_get_collection_content_retrieval_limit_for_nonfree_user(mock_client_wit
     get_collection_content_status_code_1 = get_collection_content_response_1.status_code
     assert get_collection_content_status_code_1 == 200
 
-def test_get_collection_content_from_unknown_collection(mock_client, user_create_payload, collection_create_payload, collection_add_payload):
+def test_get_collection_content_from_invalid_collection(mock_client, user_create_payload, collection_create_payload, collection_add_payload):
     """
     Verifies that the api rejects attempts to retrieve files from a non-existant collection
     """
@@ -513,7 +514,7 @@ def test_get_collection_content_from_unknown_collection(mock_client, user_create
     # create an invalid collection id
     collection_id = 1
 
-    # attempt to get file content of unknown collection
+    # attempt to get file content of invalid collection
     get_collection_content_response = mock_client.get(COLLECTIONS_PREFIX + f"/{collection_id}/archive", headers=authorization_headers)
 
     get_collection_content_status_code = get_collection_content_response.status_code
@@ -597,7 +598,7 @@ def test_valid_get_collection_file_paths(mock_client, user_create_payload, colle
     assert get_collection_file_paths_json[1]["path"] == collection_add_payload["content"][1]["path"]
     assert get_collection_file_paths_json[1]["filename"] == collection_add_payload["content"][1]["filename"]
 
-def test_get_collection_file_paths_from_unknown_collection(mock_client, user_create_payload, collection_create_payload, collection_add_payload):
+def test_get_collection_file_paths_from_invalid_collection(mock_client, user_create_payload, collection_create_payload, collection_add_payload):
     """
     Verifies that the api rejects attempts to retrieve file path information of files from a non-existant collection
     """
@@ -613,7 +614,7 @@ def test_get_collection_file_paths_from_unknown_collection(mock_client, user_cre
     # create an invalid collection id
     collection_id = 1
 
-    # attempt to get file paths of unknown collection
+    # attempt to get file paths of invalid collection
     get_collection_file_paths_response = mock_client.get(COLLECTIONS_PREFIX + f"/{collection_id}/dotfiles", headers=authorization_headers)
 
     get_collection_file_paths_status_code = get_collection_file_paths_response.status_code
@@ -663,7 +664,7 @@ def test_get_collection_file_paths_without_access_permission(mock_client, user_c
     assert get_collection_file_paths_json["detail"] == "You do not have permission to access this collection"
 
 # collection content deletion tests
-@pytest.mark.parametrize("delete_index", FILE_INDICES)
+@pytest.mark.parametrize("delete_index", FILE_INDICES_PARAMETERS)
 def test_valid_delete_file_in_collection(mock_client, user_create_payload, collection_create_payload, collection_add_payload, mock_files, delete_index):
     """
     Verifies that the api can properly delete files in a collection
@@ -727,7 +728,7 @@ def test_valid_delete_file_in_collection(mock_client, user_create_payload, colle
     get_collection_file_paths_1 = utils.get_collection_file_paths(mock_client, collection_id, authorization_headers)
     assert get_collection_file_paths_1 == collection_add_payload["content"]
 
-def test_delete_unknown_file_in_collection(mock_client, user_create_payload, collection_create_payload, collection_add_payload, mock_files):
+def test_delete_invalid_file_in_collection(mock_client, user_create_payload, collection_create_payload, collection_add_payload, mock_files):
     """
     Verifies that the api rejects attempts to delete non-existant files from a collection
     """
@@ -747,8 +748,8 @@ def test_delete_unknown_file_in_collection(mock_client, user_create_payload, col
     # add mock files to collection
     utils.add_to_collection(mock_client, collection_id, collection_add_payload, mock_files, authorization_headers)
 
-    # attempt to delete unknown file in collection
-    filename = "unknown_mock_filename"
+    # attempt to delete invalid file in collection
+    filename = "invalid_mock_filename"
 
     delete_file_in_collection_response = mock_client.delete(COLLECTIONS_PREFIX + f"/{collection_id}/dotfiles/{filename}", headers=authorization_headers)
     
@@ -758,7 +759,7 @@ def test_delete_unknown_file_in_collection(mock_client, user_create_payload, col
     delete_file_collection_json = delete_file_in_collection_response.json()
     assert delete_file_collection_json["detail"] == f"File {filename} not found"
 
-def test_delete_file_in_unknown_collection(mock_client, user_create_payload, collection_create_payload, collection_add_payload):
+def test_delete_file_in_invalid_collection(mock_client, user_create_payload, collection_create_payload, collection_add_payload):
     """
     Verifies that the api rejects attempts to delete files from a non-existant collection
     """
@@ -774,7 +775,7 @@ def test_delete_file_in_unknown_collection(mock_client, user_create_payload, col
     # create an invalid collection id
     collection_id = 1
 
-    # attempt to delete file of unknown collection   
+    # attempt to delete file of invalid collection   
     filename = "mock_filename"
     delete_file_in_collection_response = mock_client.delete(COLLECTIONS_PREFIX + f"/{collection_id}/dotfiles/{filename}", headers=authorization_headers)
 
@@ -862,7 +863,7 @@ def test_valid_delete_collection(mock_client, user_create_payload, collection_cr
     
     assert len(get_collection_list_json_1) == 0
 
-def test_delete_unknown_collection(mock_client, user_create_payload, collection_create_payload, collection_add_payload):
+def test_delete_invalid_collection(mock_client, user_create_payload, collection_create_payload, collection_add_payload):
     """
     Verifies that the api rejects attempts to delete non-existant collections
     """
@@ -878,7 +879,7 @@ def test_delete_unknown_collection(mock_client, user_create_payload, collection_
     # create an invalid collection id
     collection_id = 1
 
-    # attempt to delete an unknown collection
+    # attempt to delete an invalid collection
     delete_collection_response = mock_client.delete(COLLECTIONS_PREFIX + f"/{collection_id}", headers=authorization_headers)
     
     delete_collection_status_code = delete_collection_response.status_code

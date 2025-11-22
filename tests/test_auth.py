@@ -77,10 +77,10 @@ def test_invalid_password_login(mock_client, user_create_payload):
     # login for jwt token with invalid password
     user_login_payload = utils.get_user_login_payload(user_create_payload)
 
-    invaid_password_login_payload = user_login_payload.copy()
-    invaid_password_login_payload["password"] = "invalid_mock_password"
+    invalid_password_login_payload = user_login_payload.copy()
+    invalid_password_login_payload["password"] = "invalid_mock_password"
 
-    get_token_response = mock_client.post(AUTH_PREFIX + "/token", data=invaid_password_login_payload, headers={"content-type": "application/x-www-form-urlencoded"})
+    get_token_response = mock_client.post(AUTH_PREFIX + "/token", data=invalid_password_login_payload, headers={"content-type": "application/x-www-form-urlencoded"})
     
     get_token_status_code = get_token_response.status_code    
     assert get_token_status_code == 401

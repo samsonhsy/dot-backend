@@ -4,10 +4,10 @@ import pytest
 
 ADMIN_PREFIX = "/admin"
 
-PROMOTE_USER_PARAMETERS = ["pro", "admin"]
+USER_TIER_PARAMETERS = ["pro", "admin"]
 
 # insufficient privileges tests
-def test_insufficient_privileges(mock_client, user_create_payload, key_generation_request):
+def test_admin_endpoint_with_insufficient_privileges(mock_client, user_create_payload, key_generation_request):
     """
     Verifies that the api rejects attempts to generate license keys by non-admin users
     """
@@ -112,17 +112,17 @@ def test_valid_delete_license_key(mock_client_with_admin_tier, key_generation_re
     assert len(list_license_keys_json_1) == key_quantity - 1
     assert listed_keys == expected_listed_keys
 
-def test_delete_unknown_license_key(mock_client_with_admin_tier):
+def test_delete_invalid_license_key(mock_client_with_admin_tier):
     """
     Verifies that the api rejects attempts to delete non-existant license keys
     """
     # rename for convenience
     mock_client = mock_client_with_admin_tier
 
-    # attempt to delete an unknown license key
-    unknown_key_id = 0
+    # attempt to delete an invalid license key
+    invalid_key_id = 0
 
-    delete_license_key_repsonse = mock_client.delete(ADMIN_PREFIX + f"/license/{unknown_key_id}")
+    delete_license_key_repsonse = mock_client.delete(ADMIN_PREFIX + f"/license/{invalid_key_id}")
 
     delete_license_key_status_code = delete_license_key_repsonse.status_code
     assert delete_license_key_status_code == 404
@@ -132,7 +132,7 @@ def test_delete_unknown_license_key(mock_client_with_admin_tier):
     assert delete_license_key_json["detail"] == "License key not found"
 
 # user promotion tests
-@pytest.mark.parametrize("target_tier", PROMOTE_USER_PARAMETERS)
+@pytest.mark.parametrize("target_tier", USER_TIER_PARAMETERS)
 def test_valid_promote_user(mock_client_with_admin_tier, user_create_payload, target_tier):
     """
     Verifies that the api can properly promote a user to a higher tier
@@ -170,7 +170,7 @@ def test_valid_promote_user(mock_client_with_admin_tier, user_create_payload, ta
     current_user_info_json_2 = utils.get_user_list(mock_client)[0]
     assert current_user_info_json_2["account_tier"] == target_tier
     
-@pytest.mark.parametrize("target_tier", PROMOTE_USER_PARAMETERS)
+@pytest.mark.parametrize("target_tier", USER_TIER_PARAMETERS)
 def test_promote_user_to_same_tier(mock_client_with_admin_tier, user_create_payload, target_tier):
     """
     Verifies that the api rejects attempts to promote a user to the same tier as the user
@@ -212,7 +212,7 @@ def test_promote_user_to_same_tier(mock_client_with_admin_tier, user_create_payl
 
     assert user_promote_json_2["detail"] == f"User {username} is already in {target_tier} tier"
 
-def test_promote_user_to_unknown_tier(mock_client_with_admin_tier, user_create_payload):
+def test_promote_user_to_invalid_tier(mock_client_with_admin_tier, user_create_payload):
     """
     Verifies that the api rejects attempts to promote users to a non-existant tier
     """
@@ -235,8 +235,8 @@ def test_promote_user_to_unknown_tier(mock_client_with_admin_tier, user_create_p
     user_promote_status_code_1 = user_promote_response_1.status_code
     assert user_promote_status_code_1 == 422
 
-@pytest.mark.parametrize("target_tier", PROMOTE_USER_PARAMETERS)
-def test_promote_unknown_user(mock_client_with_admin_tier, target_tier):
+@pytest.mark.parametrize("target_tier", USER_TIER_PARAMETERS)
+def test_promote_invalid_user(mock_client_with_admin_tier, target_tier):
     """
     Verifies that the api rejects attempts to promote non-existant users
     """
