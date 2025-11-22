@@ -114,7 +114,7 @@ async def delete_from_collection(db: AsyncSession, s3: S3Client, collection_id: 
     
     await file_storage_service.delete_file_from_storage_by_filename(s3, deleted_filename)
     # DB stores the original filename (not the storage key), so delete by original filename
-    await dotfile_service.delete_dotfile(db, filename)
+    await dotfile_service.delete_dotfile(db, collection_id, filename)
 
     return
 
@@ -126,7 +126,7 @@ async def delete_collection(db: AsyncSession, s3: S3Client, collection_id: int):
         deleted_filename = dotfile_service.generate_dotfile_name_in_collection(collection_id, dotfile.filename)
         await file_storage_service.delete_file_from_storage_by_filename(s3, deleted_filename)
         # Delete DB record by the original filename field
-        await dotfile_service.delete_dotfile(db, dotfile.filename)
+        await dotfile_service.delete_dotfile(db, collection_id, dotfile.filename)
 
     # Delete the collection from the database
     db_collection = (await db.execute(select(Collection).filter(Collection.id == collection_id))).scalars().first()

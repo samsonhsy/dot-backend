@@ -36,8 +36,8 @@ async def create_dotfiles_in_collection(db: AsyncSession, collection_id:int, dot
     return db_dotfiles
 
 # deletes a dotfile record from the dotfile table
-async def delete_dotfile(db: AsyncSession, filename: str):
-    db_dotfile = (await db.execute(select(Dotfile).filter(Dotfile.filename == filename))).scalars().first()
+async def delete_dotfile(db: AsyncSession, collection_id: int, filename: str):
+    db_dotfile = (await db.execute(select(Dotfile).filter(and_(Dotfile.collection_id == collection_id, Dotfile.filename == filename)))).scalars().first()
     if db_dotfile:
         await db.delete(db_dotfile)
         await db.commit()
