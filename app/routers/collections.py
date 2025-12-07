@@ -97,10 +97,15 @@ async def add_to_collection(
     if not collection_exists:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Collection {collection_id} not found")
 
-    # Check if user has access
-    user_has_access = await collection_service.get_access_to_collection_for_user(db, collection_id, user.id)
-    if not user_has_access:
+    # Check if collection is public
+    collection_is_public = await collection_service.is_collection_public(db, collection_id)
+    if not collection_is_public:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to access this collection")
+
+    #Check if user is owner
+    user_is_owner = await collection_service.is_collection_owned_by_user(db, collection_id, user.id)
+    if not user_is_owner:
+         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to edit this collection")       
 
     result = await collection_service.add_to_collection(db, s3, collection_add, files)
 
@@ -182,10 +187,15 @@ async def delete_file_in_collection(collection_id:int, filename:str, db: AsyncSe
     if not collection_exists:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Collection {collection_id} not found")
     
-    # Check if user has access
-    user_has_access = await collection_service.get_access_to_collection_for_user(db, collection_id, user.id)
-    if not user_has_access:
+    # Check if collection is public
+    collection_is_public = await collection_service.is_collection_public(db, collection_id)
+    if not collection_is_public:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to access this collection")
+
+    #Check if user is owner
+    user_is_owner = await collection_service.is_collection_owned_by_user(db, collection_id, user.id)
+    if not user_is_owner:
+         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to edit this collection")       
 
     # Check if the file in the collection exists
     file_exists = await dotfile_service.get_dotfile_by_filename_in_collection(db, collection_id, filename)
@@ -204,10 +214,15 @@ async def delete_collection(collection_id:int, db: AsyncSession = Depends(get_db
     if not collection_exists:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Collection {collection_id} not found")
     
-    # Check if user has access
-    user_has_access = await collection_service.get_access_to_collection_for_user(db, collection_id, user.id)
-    if not user_has_access:
+    # Check if collection is public
+    collection_is_public = await collection_service.is_collection_public(db, collection_id)
+    if not collection_is_public:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to access this collection")
+
+    #Check if user is owner
+    user_is_owner = await collection_service.is_collection_owned_by_user(db, collection_id, user.id)
+    if not user_is_owner:
+         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to edit this collection")       
 
     await collection_service.delete_collection(db, s3, collection_id)
 
