@@ -22,19 +22,26 @@ from app.services import dotfile_service
 
 # checks if a user has access to a collection (public or owned by user)
 async def get_access_to_collection_for_user(db: AsyncSession, collection_id: int, user_id: int) -> bool:
+    user_is_owner = await is_collection_owned_by_user(db, collection_id, user_id)
+    collection_is_public = await is_collection_public(db, collection_id)
+    
+    return user_is_owner or collection_is_public
+
+# checks if collection is public
+async def is_collection_public(db: AsyncSession, collection_id: int) -> bool:
     result = await db.execute(select(Collection).filter(Collection.id == collection_id))
     collection = result.scalars().first()
 
-    if not collection:
-        return False
+    return not collection.is_private
 
-    if not collection.is_private:
-        return True
+# checks if a user is owned of a collection
+async def is_collection_owned_by_user(db: AsyncSession, collection_id: int, user_id: int) -> bool:
+    result = await db.execute(select(Collection).filter(Collection.id == collection_id))
+    collection = result.scalars().first()
 
     user_is_owner = (collection.owner_id == user_id)
-
+    
     return user_is_owner
-
 
 # retrieves a collection by its id
 async def get_collection_by_id(db: AsyncSession, collection_id: int) -> Optional[Collection]:
