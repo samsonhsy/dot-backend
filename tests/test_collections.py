@@ -41,6 +41,9 @@ def test_create_collection(mock_client, user_create_payload, collection_create_p
     assert collection_create_json["name"] == collection_create_payload["name"]
     assert collection_create_json["description"] == collection_create_payload["description"]
 
+
+
+
 # collection listing tests
 def test_get_my_collections(mock_client, user_create_payload, collection_create_payload):
     """
@@ -136,6 +139,9 @@ def test_get_public_collections(mock_client, user_create_payload, collection_cre
     assert len(public_collections_json) == 1
     assert public_collections_json[0]["name"] == public_collection_name
     
+
+
+
 # collection content addition tests
 def test_valid_add_to_collection(mock_client, user_create_payload, collection_create_payload, collection_add_payload, mock_files):
     """
@@ -380,6 +386,9 @@ def test_add_to_unowned_private_collection(mock_client, user_create_payload, col
     collection_add_json = collection_add_response.json()
     assert collection_add_json["detail"] == "You do not have permission to access this collection"
 
+
+
+
 # collection content retrieval tests
 def test_valid_get_collection_content(mock_client, user_create_payload, collection_create_payload, collection_add_payload, mock_files):
     """
@@ -563,6 +572,9 @@ def test_get_collection_content_of_unowned_private_collection(mock_client, user_
     get_collection_content_json = get_collection_content_response.json()
     assert get_collection_content_json["detail"] == "You do not have permission to access this collection"
 
+
+
+
 # collection file paths retrieval tests
 def test_valid_get_collection_file_paths(mock_client, user_create_payload, collection_create_payload, collection_add_payload, mock_files):
     """
@@ -662,6 +674,9 @@ def test_get_collection_file_paths_of_unowned_private_collection(mock_client, us
 
     get_collection_file_paths_json = get_collection_file_paths_response.json()
     assert get_collection_file_paths_json["detail"] == "You do not have permission to access this collection"
+
+
+
 
 # collection content deletion tests
 @pytest.mark.parametrize("delete_index", FILE_INDICES_PARAMETERS)
@@ -825,6 +840,9 @@ def test_delete_file_in_unowned_private_collection(mock_client, user_create_payl
 
     delete_file_in_collection_json = delete_file_in_collection_response.json()
     assert delete_file_in_collection_json["detail"] == "You do not have permission to access this collection"
+
+
+
 
 # collection deletion tests
 def test_valid_delete_collection(mock_client, user_create_payload, collection_create_payload, collection_add_payload, mock_files):
