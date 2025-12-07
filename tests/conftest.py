@@ -150,11 +150,11 @@ def collection_create_payload():
 def dotfiles_create_data():
     return [
         {
-            "path": "/mock_dir/",
+            "path": "/mock_dir/.mock0",
             "filename": ".mock0"
         },
         {
-            "path": "/mock_dir/",
+            "path": "/mock_dir/.mock1",
             "filename": ".mock1"
         }
     ]
