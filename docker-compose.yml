@@ -1,0 +1,54 @@
+services:
+  # PostgreSQL database
+  db:
+    image: postgres:15-alpine
+    container_name: punkt-db
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-punkt_db}
+      POSTGRES_USER: ${POSTGRES_USER:-punkt_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-punkt_password}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+
+  # MinIO S3-compatible storage
+  minio:
+    image: minio/minio:latest
+    container_name: punkt-minio
+    env_file:
+      - .env
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY:-dotminio}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:-dotminiosecret}
+    volumes:
+      - minio_data:/data
+    ports:
+      - "9000:9000" # API
+      - "9001:9001" # Console
+    command: server /data --console-address ":9001"
+    restart: unless-stopped
+
+  # FastAPI backend server
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: punkt-backend
+    env_file:
+      - .env
+    depends_on:
+      - db
+      - minio
+    ports:
+      - "8000:8000"
+    command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+    restart: unless-stopped
+
+# Volumes for persistent storage
+volumes:
+  postgres_data:
+  minio_data:

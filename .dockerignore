@@ -1,0 +1,11 @@
+# Prevent local artifacts from bloating Docker builds or overwriting image-created files
+.venv
+__pycache__
+.pytest_cache
+.env
+.env.*
+.git
+.gitignore
+.vscode
+.DS_Store
+*.pyc
